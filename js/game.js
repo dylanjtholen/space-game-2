@@ -31,7 +31,7 @@ export function tick(scene, dt = 1 / 60) {
 	if (keys['d']) moveX += 1;
 	if (keys['shift']) moveY -= 1;
 	if (keys[' ']) moveY += 1;
-	// build movement vector in world spaceu
+	// build movement vector in world space
 	const moveVec = vec3.create();
 	if (moveZ !== 0) {
 		vec3.scaleAndAdd(moveVec, moveVec, forward, moveZ);
