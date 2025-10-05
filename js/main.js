@@ -1,8 +1,8 @@
-import {render, initRenderer} from './renderer';
-import {tick, initGame} from './js/game';
-import {loadAllAssets} from './js/assetLoader';
-import {quat} from './js/lib/gl-matrix-min';
-import Model from './model';
+import {render, initRenderer} from './renderer.js';
+import {tick, initGame} from './game.js';
+import {loadAllAssets} from './assetLoader.js';
+const {quat} = glMatrix;
+import Model from './model.js';
 
 window.addEventListener('DOMContentLoaded', async () => {
 	const canvas = document.getElementById('gameCanvas');
@@ -23,12 +23,6 @@ const triangle = new Model({
 		{
 			indices: [0, 1, 2],
 			color: [0.2, 0.8, 0.3, 1],
-			texcoords: [
-				[0, 0],
-				[1, 0],
-				[0.5, 1],
-			],
-			texture: 'soup',
 		},
 	],
 	position: {x: 0, y: 0, z: 0},

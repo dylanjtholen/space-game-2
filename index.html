@@ -5,6 +5,8 @@
 	</head>
 	<body>
 		<canvas id="gameCanvas"></canvas>
-		<script type="module" src="main.js"></script>
+		<!-- gl-matrix UMD (provides global `glMatrix`). Load it before the module that expects it -->
+		<script src="js/lib/gl-matrix-min.js"></script>
+		<script type="module" src="js/main.js"></script>
 	</body>
 </html>

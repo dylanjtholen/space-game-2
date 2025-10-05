@@ -1,9 +1,23 @@
-import {mat4, vec3, quat} from './js/lib/gl-matrix-min';
-import {getAsset} from './js/assetLoader';
+import {getAsset} from './assetLoader.js';
+// gl-matrix is loaded as a UMD script and exposes a global `glMatrix` object.
+const {mat4, vec3, quat} = glMatrix;
 
 let gl;
 let shaderProgram;
 const textureCache = new Map();
+
+// Resize the canvas drawing buffer to match its displayed size (handles devicePixelRatio)
+function resizeCanvasToDisplaySize(canvas) {
+	const dpr = window.devicePixelRatio || 1;
+	const displayWidth = Math.round(canvas.clientWidth * dpr);
+	const displayHeight = Math.round(canvas.clientHeight * dpr);
+	if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+		canvas.width = displayWidth;
+		canvas.height = displayHeight;
+		return true;
+	}
+	return false;
+}
 
 async function loadShaderSource(url) {
 	const response = await fetch(url);
@@ -26,8 +40,8 @@ export async function initRenderer(canvas) {
 	gl = canvas.getContext('webgl');
 	if (!gl) throw new Error('WebGL not supported');
 
-	const vertSrc = await loadShaderSource('vert.glsl');
-	const fragSrc = await loadShaderSource('frag.glsl');
+	const vertSrc = await loadShaderSource('../shaders/vert.glsl');
+	const fragSrc = await loadShaderSource('../shaders/frag.glsl');
 
 	const vertShader = compileShader(gl, vertSrc, gl.VERTEX_SHADER);
 	const fragShader = compileShader(gl, fragSrc, gl.FRAGMENT_SHADER);
@@ -42,10 +56,19 @@ export async function initRenderer(canvas) {
 	gl.useProgram(shaderProgram);
 	gl.enable(gl.DEPTH_TEST);
 	gl.clearColor(0, 0, 0, 1);
+
+	// make sure the drawing buffer matches the displayed size on init
+	resizeCanvasToDisplaySize(canvas);
+	gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
 export function render(scene) {
 	if (!gl) throw new Error('initRenderer has not been called');
+	// Resize each frame if the canvas was resized (or devicePixelRatio changed)
+	if (resizeCanvasToDisplaySize(gl.canvas)) {
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	}
+
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 	const camera = scene.camera;
@@ -59,6 +82,7 @@ export function render(scene) {
 	vec3.add(cameraTarget, cameraPos, vec3.transformQuat(vec3.create(), [0, 0, -1], cameraQuat));
 	const up = vec3.transformQuat(vec3.create(), [0, 1, 0], cameraQuat);
 	mat4.lookAt(viewMatrix, cameraPos, cameraTarget, up);
+	// use the drawing buffer width/height (already scaled by devicePixelRatio)
 	mat4.perspective(projectionMatrix, (camera.fov * Math.PI) / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 	mat4.multiply(vpMatrix, projectionMatrix, viewMatrix);
 
