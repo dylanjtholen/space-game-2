@@ -19,21 +19,29 @@ export function tick(scene, dt = 1 / 60) {
 	// compute forward and right vectors from camera rotation
 	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], cam.rotation);
 	const right = vec3.transformQuat(vec3.create(), [1, 0, 0], cam.rotation);
+	const up = vec3.transformQuat(vec3.create(), [0, 1, 0], cam.rotation);
 
 	let moveX = 0;
 	let moveZ = 0;
+	let moveY = 0;
 
 	if (keys['w']) moveZ += 1;
 	if (keys['s']) moveZ -= 1;
 	if (keys['a']) moveX -= 1;
 	if (keys['d']) moveX += 1;
-	// build movement vector in world space
+	if (keys['shift']) moveY -= 1;
+	if (keys[' ']) moveY += 1;
+	// build movement vector in world spaceu
 	const moveVec = vec3.create();
 	if (moveZ !== 0) {
 		vec3.scaleAndAdd(moveVec, moveVec, forward, moveZ);
 	}
 	if (moveX !== 0) {
 		vec3.scaleAndAdd(moveVec, moveVec, right, moveX);
+	}
+
+	if (moveY !== 0) {
+		vec3.scaleAndAdd(moveVec, moveVec, up, moveY);
 	}
 
 	if (vec3.length(moveVec) > 0) {
