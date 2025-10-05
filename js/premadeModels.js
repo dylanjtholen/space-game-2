@@ -1,5 +1,6 @@
+import Model from './model.js';
 export function cube(texture) {
-	return Model({
+	return new Model({
 		vertices: [
 			{x: -1, y: -1, z: 1},
 			{x: 1, y: -1, z: 1},

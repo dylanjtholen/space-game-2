@@ -1,7 +1,7 @@
 import {render, initRenderer} from './renderer.js';
 import {tick, initGame} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
-import {cube} from './models/cube.js';
+import {cube} from './premadeModels.js';
 const {quat} = glMatrix;
 import Model from './model.js';
 
