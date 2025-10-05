@@ -36,6 +36,49 @@ function compileShader(gl, source, type) {
 	return shader;
 }
 
+// Helper: check power-of-two
+function isPowerOfTwo(value) {
+	return (value & (value - 1)) === 0;
+}
+
+// Create and configure a WebGL texture from an ImageBitmap or HTMLImageElement
+function createGLTextureFromImage(img) {
+	const tex = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, tex);
+	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+
+	const width = img.width;
+	const height = img.height;
+	const pot = isPowerOfTwo(width) && isPowerOfTwo(height);
+
+	if (pot) {
+		// power-of-two: allow repeat and mipmaps
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+	} else {
+		// non-power-of-two: must use clamp-to-edge and no mipmaps
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	}
+
+	// Optional: anisotropic filtering if available (improves texture quality)
+	const ext = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic') || gl.getExtension('MOZ_EXT_texture_filter_anisotropic');
+	if (ext) {
+		const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+		// use a reasonable amount (clamped to max)
+		const amount = Math.min(4, max);
+		gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, amount);
+	}
+
+	return tex;
+}
+
 export async function initRenderer(canvas) {
 	gl = canvas.getContext('webgl');
 	if (!gl) throw new Error('WebGL not supported');
@@ -135,12 +178,7 @@ export function render(scene) {
 				if (img) {
 					let tex = textureCache.get(face.texture);
 					if (!tex) {
-						tex = gl.createTexture();
-						gl.bindTexture(gl.TEXTURE_2D, tex);
-						gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+						tex = createGLTextureFromImage(img);
 						textureCache.set(face.texture, tex);
 					} else {
 						gl.bindTexture(gl.TEXTURE_2D, tex);
