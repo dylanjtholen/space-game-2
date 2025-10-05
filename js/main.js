@@ -61,6 +61,42 @@ const cube = new Model({
 			],
 			texture: 'soup',
 		},
+		{
+			indices: [5, 4, 7],
+			texcoords: [
+				[0.5, 0.667],
+				[0.75, 0.667],
+				[0.75, 0.333],
+			],
+			texture: 'soup',
+		},
+		{
+			indices: [7, 6, 5],
+			texcoords: [
+				[0.75, 0.333],
+				[0.5, 0.333],
+				[0.5, 0.667],
+			],
+			texture: 'soup',
+		},
+		{
+			indices: [4, 0, 3],
+			texcoords: [
+				[0.75, 0.667],
+				[1, 0.667],
+				[1, 0.333],
+			],
+			texture: 'soup',
+		},
+		{
+			indices: [3, 7, 4],
+			texcoords: [
+				[1, 0.333],
+				[0.75, 0.333],
+				[0.75, 0.667],
+			],
+			texture: 'soup',
+		},
 	],
 	position: {x: 0, y: 0, z: 0},
 });
