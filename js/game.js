@@ -1,4 +1,5 @@
 const {quat, vec3} = glMatrix;
+import {cube} from './premadeModels.js';
 
 // keys holds current pressed keys (populated by event listeners below)
 const keys = {};
@@ -14,7 +15,7 @@ export function tick(scene, dt = 1 / 60) {
 	const moveSpeed = 3.0;
 	const rotSpeed = Math.PI / 2;
 
-	const cam = scene.camera;
+	const cam = scene.players[scene.currentPlayer];
 
 	// compute forward and right vectors from camera rotation
 	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], cam.rotation);
@@ -85,4 +86,15 @@ export function tick(scene, dt = 1 / 60) {
 	return scene;
 }
 
-export function initGame() {}
+export function initGame() {
+	return {
+		players: [
+			{
+				position: {x: 0, y: 0, z: 4},
+				rotation: quat.create(),
+			},
+		],
+		currentPlayer: 0,
+		objects: [cube('soup')],
+	};
+}

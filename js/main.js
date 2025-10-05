@@ -1,31 +1,24 @@
 import {render, initRenderer} from './renderer.js';
 import {tick, initGame} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
-import {cube} from './premadeModels.js';
 const {quat} = glMatrix;
 import Model from './model.js';
+import {lerp3} from './utils.js';
+
+let gameState;
 
 window.addEventListener('DOMContentLoaded', async () => {
 	const canvas = document.getElementById('gameCanvas');
 	await initRenderer(canvas);
-	await initGame();
+	gameState = initGame();
 	await loadAllAssets();
 	drawLoop();
 });
 
-// create a simple model: one colored triangle
-
-// To use a texture, first load it with asset loader and then reference the texture name in a face.texture property.
-// Example (requires assetLoader.loadAsset to be called before rendering):
-// faces: [{ indices: [0,1,2], texcoords: [[0,0],[1,0],[0.5,1]], texture: 'crate' }]
-
-let sampleScene = {
-	camera: {
-		position: {x: 0, y: 0, z: 4},
-		rotation: quat.create(),
-		fov: 60,
-	},
-	objects: [cube('soup')],
+let camera = {
+	position: {x: 0, y: 0, z: 4},
+	rotation: quat.create(),
+	fov: 60,
 };
 
 let lastTime = null;
@@ -34,7 +27,17 @@ function drawLoop(time) {
 	const dt = (time - lastTime) / 1000; // convert ms to s
 	lastTime = time;
 
-	sampleScene = tick(sampleScene, dt);
-	render(sampleScene);
+	gameState = tick(gameState, dt);
+	camera = cameraTransform(camera, gameState);
+	render(camera, gameState);
 	requestAnimationFrame(drawLoop);
+}
+
+function cameraTransform(cam, state) {
+	const player = state.players[state.currentPlayer];
+	if (!player) return cam;
+
+	cam.position = lerp3(cam.position, player.position, 0.1);
+	cam.rotation = quat.slerp(quat.create(), cam.rotation, player.rotation, 0.1);
+	return cam;
 }

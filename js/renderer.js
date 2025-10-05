@@ -1,4 +1,5 @@
 import {getAsset} from './assetLoader.js';
+
 // gl-matrix is loaded as a UMD script and exposes a global `glMatrix` object.
 const {mat4, vec3, quat} = glMatrix;
 
@@ -105,7 +106,7 @@ export async function initRenderer(canvas) {
 	gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-export function render(scene) {
+export function render(camera, scene) {
 	if (!gl) throw new Error('initRenderer has not been called');
 	// Resize each frame if the canvas was resized (or devicePixelRatio changed)
 	if (resizeCanvasToDisplaySize(gl.canvas)) {
@@ -114,7 +115,6 @@ export function render(scene) {
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	const camera = scene.camera;
 	const viewMatrix = mat4.create();
 	const projectionMatrix = mat4.create();
 	const vpMatrix = mat4.create();
