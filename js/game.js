@@ -55,6 +55,15 @@ export function tick(scene, dt = 1 / 60) {
 		const q = quat.setAxisAngle(quat.create(), [0, 1, 0], angle);
 		quat.multiply(cam.rotation, cam.rotation, q);
 	}
+	let pitch = 0;
+	if (keys['arrowup'] && !keys['w']) pitch += 1; // prefer W for forward
+	if (keys['arrowdown'] && !keys['s']) pitch -= 1;
+	if (pitch !== 0) {
+		const angle = pitch * rotSpeed * dt;
+		const right = vec3.transformQuat(vec3.create(), [1, 0, 0], cam.rotation);
+		const q = quat.setAxisAngle(quat.create(), right, angle);
+		quat.multiply(cam.rotation, q, cam.rotation);
+	}
 
 	return scene;
 }
