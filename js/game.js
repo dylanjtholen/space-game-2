@@ -11,8 +11,8 @@ window.addEventListener('keyup', (e) => {
 
 export function tick(scene, dt = 1 / 60) {
 	// dt is in seconds
-	const moveSpeed = 3.0; // units per second
-	const rotSpeed = Math.PI; // radians per second for yaw when using arrow keys
+	const moveSpeed = 3.0;
+	const rotSpeed = Math.PI / 2;
 
 	const cam = scene.camera;
 
@@ -20,7 +20,6 @@ export function tick(scene, dt = 1 / 60) {
 	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], cam.rotation);
 	const right = vec3.transformQuat(vec3.create(), [1, 0, 0], cam.rotation);
 
-	// movement input (WASD or arrow keys for forward/back/strafe)
 	let moveX = 0;
 	let moveZ = 0;
 
@@ -37,7 +36,6 @@ export function tick(scene, dt = 1 / 60) {
 		vec3.scaleAndAdd(moveVec, moveVec, right, moveX);
 	}
 
-	// normalize movement to avoid faster diagonal speed
 	if (vec3.length(moveVec) > 0) {
 		vec3.normalize(moveVec, moveVec);
 		vec3.scale(moveVec, moveVec, moveSpeed * dt);
@@ -46,24 +44,35 @@ export function tick(scene, dt = 1 / 60) {
 		cam.position.z += moveVec[2];
 	}
 
-	// rotation with left/right arrows (yaw)
 	let yaw = 0;
-	if (keys['arrowleft'] && !keys['a']) yaw += 1; // prefer A for strafing
-	if (keys['arrowright'] && !keys['d']) yaw -= 1;
+	if (keys['arrowleft']) yaw += 1;
+	if (keys['arrowright']) yaw -= 1;
 	if (yaw !== 0) {
 		const angle = yaw * rotSpeed * dt;
 		const q = quat.setAxisAngle(quat.create(), [0, 1, 0], angle);
 		quat.multiply(cam.rotation, cam.rotation, q);
 	}
 	let pitch = 0;
-	if (keys['arrowup'] && !keys['w']) pitch += 1; // prefer W for forward
-	if (keys['arrowdown'] && !keys['s']) pitch -= 1;
+	if (keys['arrowup']) pitch += 1;
+	if (keys['arrowdown']) pitch -= 1;
 	if (pitch !== 0) {
 		const angle = pitch * rotSpeed * dt;
 		const right = vec3.transformQuat(vec3.create(), [1, 0, 0], cam.rotation);
 		const q = quat.setAxisAngle(quat.create(), right, angle);
 		quat.multiply(cam.rotation, q, cam.rotation);
 	}
+	let roll = 0;
+	if (keys['q']) roll += 1;
+	if (keys['e']) roll -= 1;
+	if (roll !== 0) {
+		const angle = roll * rotSpeed * dt;
+		const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], cam.rotation);
+		const q = quat.setAxisAngle(quat.create(), forward, angle);
+		quat.multiply(cam.rotation, q, cam.rotation);
+	}
+
+	// Normalize quaternion to prevent drift
+	quat.normalize(cam.rotation, cam.rotation);
 
 	return scene;
 }

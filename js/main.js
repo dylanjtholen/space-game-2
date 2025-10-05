@@ -15,14 +15,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 // create a simple model: one colored triangle
 const cube = new Model({
 	vertices: [
-		{x: -1, y: -1, z: -1},
-		{x: 1, y: -1, z: -1},
-		{x: 1, y: 1, z: -1},
-		{x: -1, y: 1, z: -1},
 		{x: -1, y: -1, z: 1},
 		{x: 1, y: -1, z: 1},
 		{x: 1, y: 1, z: 1},
 		{x: -1, y: 1, z: 1},
+		{x: -1, y: -1, z: -1},
+		{x: 1, y: -1, z: -1},
+		{x: 1, y: 1, z: -1},
+		{x: -1, y: 1, z: -1},
 	],
 	faces: [
 		{
@@ -40,6 +40,24 @@ const cube = new Model({
 				[0.25, 0.333],
 				[0, 0.333],
 				[0, 0.667],
+			],
+			texture: 'soup',
+		},
+		{
+			indices: [1, 5, 6],
+			texcoords: [
+				[0.25, 0.667],
+				[0.5, 0.667],
+				[0.5, 0.333],
+			],
+			texture: 'soup',
+		},
+		{
+			indices: [6, 2, 1],
+			texcoords: [
+				[0.5, 0.333],
+				[0.25, 0.333],
+				[0.25, 0.667],
 			],
 			texture: 'soup',
 		},
