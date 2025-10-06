@@ -127,18 +127,27 @@ export function cube(texture) {
 
 export function ship() {
 	//just a triangle for now
-	return new Model({
+	let m = new Model({
 		vertices: [
-			{x: 0, y: 0.5, z: 0.5},
-			{x: -0.5, y: -0.5, z: 0},
-			{x: 0.5, y: -0.5, z: 0},
+			{x: -1, y: -0.5, z: 2},
+			{x: 1, y: -0.5, z: 2},
+			{x: 0, y: -1.0, z: 1},
+			{x: 0, y: -0.5, z: -1},
+			{x: 0, y: -0.5, z: 1},
+			{x: 0, y: -0.5, z: -1},
 		],
 		faces: [
-			{
-				indices: [0, 1, 2],
-				color: [1, 0, 0, 1],
-			},
+			{color: [1, 0, 0, 1], indices: [3, 1, 4]},
+			{color: [0, 1, 0, 1], indices: [3, 0, 4]},
+			{color: [0, 0, 1, 1], indices: [2, 0, 4]},
+			{color: [1, 1, 0, 1], indices: [2, 1, 4]},
+			{color: [0, 1, 1, 1], indices: [5, 1, 2]},
+			{color: [1, 0, 1, 1], indices: [5, 0, 2]},
 		],
 		position: {x: 0, y: 0, z: 0},
+		scale: {x: 0.5, y: 0.5, z: 0.5},
 	});
+	//velocity for players
+	m.velocity = {x: 0, y: 0, z: 0};
+	return m;
 }

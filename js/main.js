@@ -38,7 +38,7 @@ function cameraTransform(cam, state) {
 	if (!player) return cam;
 
 	//target behind and above player
-	const offset = {x: 0, y: 1, z: 5};
+	const offset = {x: 0, y: 0.25, z: 5};
 	const rotOffset = quat.fromEuler(quat.create(), -10, 0, 0);
 	quat.multiply(rotOffset, player.rotation, rotOffset);
 	const offsetRotated = vec3.transformQuat(vec3.create(), [offset.x, offset.y, offset.z], rotOffset);
@@ -48,7 +48,7 @@ function cameraTransform(cam, state) {
 		z: player.position.z + offsetRotated[2],
 	};
 
-	cam.position = lerp3(cam.position, targetPos, 0.1);
+	cam.position = lerp3(cam.position, targetPos, 0.08);
 	cam.rotation = quat.slerp(quat.create(), cam.rotation, player.rotation, 0.1);
 	return cam;
 }
