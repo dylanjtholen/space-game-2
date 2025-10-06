@@ -10,7 +10,7 @@ window.addEventListener('keyup', (e) => {
 	keys[e.key.toLowerCase()] = false;
 });
 
-const fpsControlMode = false; // makes debug easier
+const fpsControlMode = true; // makes debug easier
 
 export function tick(scene, dt = 1 / 60) {
 	// dt is in seconds
