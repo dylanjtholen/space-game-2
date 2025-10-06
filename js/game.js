@@ -1,5 +1,5 @@
 const {quat, vec3} = glMatrix;
-import {cube, ship} from './premadeModels.js';
+import {cube, ship, ring} from './premadeModels.js';
 
 // keys holds current pressed keys (populated by event listeners below)
 const keys = {};
@@ -138,6 +138,6 @@ export function initGame() {
 	return {
 		players: [ship()],
 		currentPlayer: 0,
-		objects: [cube('soup')],
+		objects: [cube('soup'), ring({x: 0, y: 0, z: -10}), ring({x: 0, y: 0, z: -15}), ring({x: 0, y: 0, z: -20})],
 	};
 }

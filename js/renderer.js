@@ -1,4 +1,5 @@
 import {getAsset} from './assetLoader.js';
+import {hexToRgb} from './utils.js';
 
 // gl-matrix is loaded as a UMD script and exposes a global `glMatrix` object.
 const {mat4, vec3, quat} = glMatrix;
@@ -192,8 +193,9 @@ export function render(camera, scene) {
 			} else {
 				// no texture: use color
 				gl.uniform1i(useTextureLocation, 0);
-				if (face.color) gl.uniform4fv(colorLocation, face.color);
-				else gl.uniform4fv(colorLocation, [1, 1, 1, 1]);
+				//from hex
+				const color = face.color ? hexToRgb(face.color) : [1, 1, 1, 1];
+				gl.uniform4fv(colorLocation, color);
 			}
 
 			gl.drawArrays(gl.TRIANGLES, 0, 3);
