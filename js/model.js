@@ -1,12 +1,14 @@
+const {quat} = glMatrix;
+
 export default class Model {
-	constructor({vertices = [], faces = [], position = {x: 0, y: 0, z: 0}, scale = {x: 1, y: 1, z: 1}, rotation = {x: 0, y: 0, z: 0}} = {}) {
+	constructor({vertices = [], faces = [], position = {x: 0, y: 0, z: 0}, scale = {x: 1, y: 1, z: 1}, rotation = quat.create()} = {}) {
 		// vertices: [{x,y,z}, ...]
 		// faces: [{indices: [i0,i1,i2], texcoords: [[u,v],[u,v],[u,v]] (optional), texture: 'name' (optional), color: [r,g,b,a] (optional)}]
 		this.vertices = vertices;
 		this.faces = faces;
 		this.position = position;
 		this.scale = scale;
-		this.rotation = rotation; // Euler degrees
+		this.rotation = rotation;
 	}
 
 	// Returns an array of face objects expanded for rendering. Each item contains positions (Float32Array length 9), texcoords (Float32Array length 6 or null), texture (string|null), color (array|null)

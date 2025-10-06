@@ -1,5 +1,5 @@
 const {quat, vec3} = glMatrix;
-import {cube} from './premadeModels.js';
+import {cube, ship} from './premadeModels.js';
 
 // keys holds current pressed keys (populated by event listeners below)
 const keys = {};
@@ -15,12 +15,12 @@ export function tick(scene, dt = 1 / 60) {
 	const moveSpeed = 3.0;
 	const rotSpeed = Math.PI / 2;
 
-	const cam = scene.players[scene.currentPlayer];
+	const player = scene.players[scene.currentPlayer];
 
 	// compute forward and right vectors from camera rotation
-	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], cam.rotation);
-	const right = vec3.transformQuat(vec3.create(), [1, 0, 0], cam.rotation);
-	const up = vec3.transformQuat(vec3.create(), [0, 1, 0], cam.rotation);
+	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], player.rotation);
+	const right = vec3.transformQuat(vec3.create(), [1, 0, 0], player.rotation);
+	const up = vec3.transformQuat(vec3.create(), [0, 1, 0], player.rotation);
 
 	let moveX = 0;
 	let moveZ = 0;
@@ -48,9 +48,9 @@ export function tick(scene, dt = 1 / 60) {
 	if (vec3.length(moveVec) > 0) {
 		vec3.normalize(moveVec, moveVec);
 		vec3.scale(moveVec, moveVec, moveSpeed * dt);
-		cam.position.x += moveVec[0];
-		cam.position.y += moveVec[1];
-		cam.position.z += moveVec[2];
+		player.position.x += moveVec[0];
+		player.position.y += moveVec[1];
+		player.position.z += moveVec[2];
 	}
 
 	let yaw = 0;
@@ -59,41 +59,36 @@ export function tick(scene, dt = 1 / 60) {
 	if (yaw !== 0) {
 		const angle = yaw * rotSpeed * dt;
 		const q = quat.setAxisAngle(quat.create(), [0, 1, 0], angle);
-		quat.multiply(cam.rotation, cam.rotation, q);
+		quat.multiply(player.rotation, player.rotation, q);
 	}
 	let pitch = 0;
 	if (keys['arrowup']) pitch += 1;
 	if (keys['arrowdown']) pitch -= 1;
 	if (pitch !== 0) {
 		const angle = pitch * rotSpeed * dt;
-		const right = vec3.transformQuat(vec3.create(), [1, 0, 0], cam.rotation);
+		const right = vec3.transformQuat(vec3.create(), [1, 0, 0], player.rotation);
 		const q = quat.setAxisAngle(quat.create(), right, angle);
-		quat.multiply(cam.rotation, q, cam.rotation);
+		quat.multiply(player.rotation, q, player.rotation);
 	}
 	let roll = 0;
 	if (keys['q']) roll += 1;
 	if (keys['e']) roll -= 1;
 	if (roll !== 0) {
 		const angle = roll * rotSpeed * dt;
-		const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], cam.rotation);
+		const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], player.rotation);
 		const q = quat.setAxisAngle(quat.create(), forward, angle);
-		quat.multiply(cam.rotation, q, cam.rotation);
+		quat.multiply(player.rotation, q, player.rotation);
 	}
 
 	// Normalize quaternion to prevent drift
-	quat.normalize(cam.rotation, cam.rotation);
+	quat.normalize(player.rotation, player.rotation);
 
 	return scene;
 }
 
 export function initGame() {
 	return {
-		players: [
-			{
-				position: {x: 0, y: 0, z: 4},
-				rotation: quat.create(),
-			},
-		],
+		players: [ship()],
 		currentPlayer: 0,
 		objects: [cube('soup')],
 	};

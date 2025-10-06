@@ -129,15 +129,12 @@ export function render(camera, scene) {
 	mat4.perspective(projectionMatrix, (camera.fov * Math.PI) / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 	mat4.multiply(vpMatrix, projectionMatrix, viewMatrix);
 
-	scene.objects.forEach((object) => {
+	[...scene.objects, ...scene.players].forEach((object) => {
 		const obj = object.getRenderable();
-		// model transform
+		// model transform: compose rotation, translation and scale correctly
 		const modelMatrix = mat4.create();
-		mat4.translate(modelMatrix, modelMatrix, [obj.position.x, obj.position.y, obj.position.z]);
-		const objQuat = quat.create();
-		quat.fromEuler(objQuat, obj.rotation.x, obj.rotation.y, obj.rotation.z);
-		mat4.fromQuat(modelMatrix, objQuat);
-		mat4.scale(modelMatrix, modelMatrix, [obj.scale.x, obj.scale.y, obj.scale.z]);
+		const objQuat = obj.rotation;
+		mat4.fromRotationTranslationScale(modelMatrix, objQuat, [obj.position.x, obj.position.y, obj.position.z], [obj.scale.x, obj.scale.y, obj.scale.z]);
 
 		const mvpMatrix = mat4.create();
 		mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
