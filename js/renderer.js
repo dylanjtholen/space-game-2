@@ -85,8 +85,8 @@ export async function initRenderer(canvas) {
 	gl = canvas.getContext('webgl');
 	if (!gl) throw new Error('WebGL not supported');
 
-	const vertSrc = await loadShaderSource('../shaders/vert.glsl');
-	const fragSrc = await loadShaderSource('../shaders/frag.glsl');
+	const vertSrc = await loadShaderSource('shaders/vert.glsl');
+	const fragSrc = await loadShaderSource('shaders/frag.glsl');
 
 	const vertShader = compileShader(gl, vertSrc, gl.VERTEX_SHADER);
 	const fragShader = compileShader(gl, fragSrc, gl.FRAGMENT_SHADER);
