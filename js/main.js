@@ -24,7 +24,7 @@ let camera = {
 let lastTime = null;
 function drawLoop(time) {
 	if (!lastTime) lastTime = time;
-	const dt = (time - lastTime) / 1000; // convert ms to s
+	const dt = (time - lastTime) / 1000; // dt is in seconds
 	lastTime = time;
 
 	gameState = tick(gameState, dt);

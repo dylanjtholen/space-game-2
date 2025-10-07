@@ -11,7 +11,6 @@ export default class Model {
 		this.rotation = rotation;
 	}
 
-	// Returns an array of face objects expanded for rendering
 	getRenderable() {
 		const faces = [];
 		for (const f of this.faces) {

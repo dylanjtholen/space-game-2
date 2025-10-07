@@ -11,7 +11,6 @@ export function lerp3(a, b, t) {
 }
 
 export function hexToRgb(hex) {
-	// Convert hex color to [r, g, b, a] array with values from 0 to 1
 	if (hex.startsWith('#')) hex = hex.slice(1);
 	const bigint = parseInt(hex, 16);
 	const r = (bigint >> 16) & 255;

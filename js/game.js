@@ -19,7 +19,7 @@ export function tick(scene, dt = 1 / 60) {
 
 	const player = scene.players[scene.currentPlayer];
 
-	// compute forward and right vectors from camera rotation
+	// get forward and right vectors from camera rotation
 	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], player.rotation);
 	const right = vec3.transformQuat(vec3.create(), [1, 0, 0], player.rotation);
 	const up = vec3.transformQuat(vec3.create(), [0, 1, 0], player.rotation);

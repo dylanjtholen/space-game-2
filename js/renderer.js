@@ -1,7 +1,6 @@
 import {getAsset} from './assetLoader.js';
 import {hexToRgb} from './utils.js';
 
-// gl-matrix is loaded as a UMD script and exposes a global `glMatrix` object.
 const {mat4, vec3, quat} = glMatrix;
 
 let gl;
@@ -38,7 +37,6 @@ function compileShader(gl, source, type) {
 	return shader;
 }
 
-// Helper: check power-of-two
 function isPowerOfTwo(value) {
 	return (value & (value - 1)) === 0;
 }
@@ -69,11 +67,9 @@ function createGLTextureFromImage(img) {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	}
 
-	// Optional: anisotropic filtering if available (improves texture quality)
 	const ext = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic') || gl.getExtension('MOZ_EXT_texture_filter_anisotropic');
 	if (ext) {
 		const max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-		// use a reasonable amount (clamped to max)
 		const amount = Math.min(4, max);
 		gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, amount);
 	}
@@ -132,7 +128,7 @@ export function render(camera, scene) {
 
 	[...scene.objects, ...scene.players].forEach((object) => {
 		const obj = object.getRenderable();
-		// model transform: compose rotation, translation and scale correctly
+		// model transform: compose rotation, translation and scale
 		const modelMatrix = mat4.create();
 		const objQuat = obj.rotation;
 		mat4.fromRotationTranslationScale(modelMatrix, objQuat, [obj.position.x, obj.position.y, obj.position.z], [obj.scale.x, obj.scale.y, obj.scale.z]);
@@ -148,17 +144,14 @@ export function render(camera, scene) {
 		const colorLocation = gl.getUniformLocation(shaderProgram, 'uColor');
 		const textureLocation = gl.getUniformLocation(shaderProgram, 'uTexture');
 
-		// Each object can provide faces (array of indices + texcoords)
 		const faces = obj.faces || [];
 		faces.forEach((face) => {
-			// position buffer (3 vertices)
 			const posBuf = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
 			gl.bufferData(gl.ARRAY_BUFFER, face.positions, gl.STATIC_DRAW);
 			gl.enableVertexAttribArray(positionLocation);
 			gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-			// texcoord buffer (optional)
 			if (face.texcoords) {
 				const texBuf = gl.createBuffer();
 				gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
@@ -166,7 +159,6 @@ export function render(camera, scene) {
 				gl.enableVertexAttribArray(texLocation);
 				gl.vertexAttribPointer(texLocation, 2, gl.FLOAT, false, 0, 0);
 			} else {
-				// set 0 texcoords so shader doesn't read garbage
 				gl.disableVertexAttribArray(texLocation);
 				gl.vertexAttrib2f(texLocation, 0, 0);
 			}
@@ -191,9 +183,7 @@ export function render(camera, scene) {
 					else gl.uniform4fv(colorLocation, [1, 1, 1, 1]);
 				}
 			} else {
-				// no texture: use color
 				gl.uniform1i(useTextureLocation, 0);
-				//from hex
 				const color = face.color ? hexToRgb(face.color) : [1, 1, 1, 1];
 				gl.uniform4fv(colorLocation, color);
 			}
