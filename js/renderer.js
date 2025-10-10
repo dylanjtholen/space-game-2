@@ -154,7 +154,6 @@ export function render(camera, scene) {
 	});
 
 	for (const [key, group] of batches.entries()) {
-		// Bind texture or set color once per batch
 		let tex = null;
 		let useTexture = false;
 		let color = [1, 1, 1, 1];
@@ -184,7 +183,7 @@ export function render(camera, scene) {
 
 		// Draw all faces
 		for (const {obj, face} of group) {
-			// model transform: compose rotation, translation and scale
+			// compose rotation, translation and scale
 			const modelMatrix = mat4.create();
 			const objQuat = obj.rotation;
 			mat4.fromRotationTranslationScale(modelMatrix, objQuat, [obj.position.x, obj.position.y, obj.position.z], [obj.scale.x, obj.scale.y, obj.scale.z]);
