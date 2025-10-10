@@ -195,19 +195,25 @@ export function render(camera, scene) {
 
 			const positionLocation = glLocations.position;
 			const texLocation = glLocations.texcoord;
-			const texBuf = gl.createBuffer();
 
-			// Position buffer
-			const posBuf = gl.createBuffer();
-			gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-			gl.bufferData(gl.ARRAY_BUFFER, face.positions, gl.STATIC_DRAW);
+			if (!face._posBuf) {
+				face._posBuf = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, face._posBuf);
+				gl.bufferData(gl.ARRAY_BUFFER, face.positions, gl.STATIC_DRAW);
+			} else {
+				gl.bindBuffer(gl.ARRAY_BUFFER, face._posBuf);
+			}
 			gl.enableVertexAttribArray(positionLocation);
 			gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-			// Texcoord buffer
 			if (face.texcoords) {
-				gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
-				gl.bufferData(gl.ARRAY_BUFFER, face.texcoords, gl.STATIC_DRAW);
+				if (!face._texBuf) {
+					face._texBuf = gl.createBuffer();
+					gl.bindBuffer(gl.ARRAY_BUFFER, face._texBuf);
+					gl.bufferData(gl.ARRAY_BUFFER, face.texcoords, gl.STATIC_DRAW);
+				} else {
+					gl.bindBuffer(gl.ARRAY_BUFFER, face._texBuf);
+				}
 				gl.enableVertexAttribArray(texLocation);
 				gl.vertexAttribPointer(texLocation, 2, gl.FLOAT, false, 0, 0);
 			} else {

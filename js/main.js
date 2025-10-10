@@ -29,10 +29,10 @@ function tickLoop() {
 	const dt = (time - lastTime) / 1000; // dt is in seconds
 	lastTime = time;
 	gameState = tick(gameState, dt);
+	camera = cameraTransform(camera, gameState);
 }
 
 function drawLoop(time) {
-	camera = cameraTransform(camera, gameState);
 	render(camera, gameState);
 	requestAnimationFrame(drawLoop);
 }
