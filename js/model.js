@@ -63,4 +63,10 @@ export default class Model {
 			faces: faces,
 		};
 	}
+
+	changeColor(newColor) {
+		for (const f of this.faces) {
+			f.color = newColor;
+		}
+	}
 }

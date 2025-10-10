@@ -13,6 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 	gameState = initGame();
 	await loadAllAssets();
 	requestAnimationFrame(drawLoop);
+	setInterval(tickLoop, 1000 / 60);
 });
 
 let camera = {
@@ -22,12 +23,15 @@ let camera = {
 };
 
 let lastTime = null;
-function drawLoop(time) {
+function tickLoop() {
+	let time = performance.now();
 	if (!lastTime) lastTime = time;
 	const dt = (time - lastTime) / 1000; // dt is in seconds
 	lastTime = time;
-
 	gameState = tick(gameState, dt);
+}
+
+function drawLoop(time) {
 	camera = cameraTransform(camera, gameState);
 	render(camera, gameState);
 	requestAnimationFrame(drawLoop);
@@ -48,7 +52,7 @@ function cameraTransform(cam, state) {
 		z: player.position.z + offsetRotated[2],
 	};
 
-	cam.position = lerp3(cam.position, targetPos, 0.08);
+	cam.position = lerp3(cam.position, targetPos, 0.15);
 	cam.rotation = quat.slerp(quat.create(), cam.rotation, player.rotation, 0.1);
 	return cam;
 }

@@ -1,4 +1,5 @@
 import Model from './model.js';
+const {quat, vec3} = glMatrix;
 export function cube(texture) {
 	return new Model({
 		vertices: [
@@ -152,88 +153,107 @@ export function ship() {
 	return m;
 }
 
-export function ring(position = {x: 0, y: 0, z: 0}) {
-	const color = '#FFFFFF';
-	return new Model({
-		vertices: [
-			{x: 1.53, y: 0, z: 0.25},
-			{x: 1.08, y: 1.08, z: 0.25},
-			{x: 0, y: 1.53, z: 0.25},
-			{x: -1.08, y: 1.08, z: 0.25},
-			{x: -1.53, y: 0, z: 0.25},
-			{x: -1.08, y: -1.08, z: 0.25},
-			{x: 0, y: -1.53, z: 0.25},
-			{x: 1.08, y: -1.08, z: 0.25},
-			{x: 1.53, y: 0, z: -0.25},
-			{x: 1.08, y: 1.08, z: -0.25},
-			{x: 0, y: 1.53, z: -0.25},
-			{x: -1.08, y: 1.08, z: -0.25},
-			{x: -1.53, y: 0, z: -0.25},
-			{x: -1.08, y: -1.08, z: -0.25},
-			{x: 0, y: -1.53, z: -0.25},
-			{x: 1.08, y: -1.08, z: -0.25},
-			{x: 1.9125, y: 0, z: 0.25},
-			{x: 1.35, y: 1.35, z: 0.25},
-			{x: 0, y: 1.9125, z: 0.25},
-			{x: -1.35, y: 1.35, z: 0.25},
-			{x: -1.9125, y: 0, z: 0.25},
-			{x: -1.35, y: -1.35, z: 0.25},
-			{x: 0, y: -1.9125, z: 0.25},
-			{x: 1.35, y: -1.35, z: 0.25},
-			{x: 1.9125, y: 0, z: -0.25},
-			{x: 1.35, y: 1.35, z: -0.25},
-			{x: 0, y: 1.9125, z: -0.25},
-			{x: -1.35, y: 1.35, z: -0.25},
-			{x: -1.9125, y: 0, z: -0.25},
-			{x: -1.35, y: -1.35, z: -0.25},
-			{x: 0, y: -1.9125, z: -0.25},
-			{x: 1.35, y: -1.35, z: -0.25},
-		],
-		faces: [
-			{indices: [0, 1, 8, 9], color: color},
-			{indices: [1, 2, 9, 10], color: color},
-			{indices: [2, 3, 10, 11], color: color},
-			{indices: [3, 4, 11, 12], color: color},
-			{indices: [4, 5, 12, 13], color: color},
-			{indices: [5, 6, 13, 14], color: color},
-			{indices: [6, 7, 14, 15], color: color},
-			{indices: [0, 7, 8, 15], color: color},
-			{indices: [16, 17, 24, 25], color: color},
-			{indices: [17, 18, 25, 26], color: color},
-			{indices: [18, 19, 26, 27], color: color},
-			{indices: [19, 20, 27, 28], color: color},
-			{indices: [20, 21, 28, 29], color: color},
-			{indices: [21, 22, 29, 30], color: color},
-			{indices: [22, 23, 30, 31], color: color},
-			{indices: [16, 23, 24, 31], color: color},
-			{indices: [10, 11, 26, 27], color: color},
-			{indices: [11, 12, 27, 28], color: color},
-			{indices: [12, 13, 28, 29], color: color},
-			{indices: [13, 14, 29, 30], color: color},
-			{indices: [14, 15, 30, 31], color: color},
-			{indices: [15, 8, 31, 24], color: color},
-			{indices: [8, 31, 24, 25], color: color},
-			{indices: [8, 9, 24, 25], color: color},
-			{indices: [9, 24, 25, 26], color: color},
-			{indices: [9, 10, 25, 26], color: color},
-			{indices: [10, 25, 26, 27], color: color},
-			{indices: [2, 3, 18, 19], color: color},
-			{indices: [3, 18, 19, 20], color: color},
-			{indices: [3, 4, 19, 20], color: color},
-			{indices: [4, 19, 20, 21], color: color},
-			{indices: [4, 5, 20, 21], color: color},
-			{indices: [5, 20, 21, 22], color: color},
-			{indices: [5, 6, 21, 22], color: color},
-			{indices: [6, 21, 22, 23], color: color},
-			{indices: [6, 7, 22, 23], color: color},
-			{indices: [7, 22, 23, 16], color: color},
-			{indices: [7, 0, 23, 16], color: color},
-			{indices: [0, 23, 16, 17], color: color},
-			{indices: [0, 1, 16, 17], color: color},
-			{indices: [1, 16, 17, 18], color: color},
-			{indices: [1, 2, 17, 18], color: color},
-			{indices: [2, 17, 18, 19], color: color},
-		],
-		position: position,
-	});
+export class Ring extends Model {
+	constructor({position = {x: 0, y: 0, z: 0}, rotation = [0, 0, 0, 1], scale = {x: 1, y: 1, z: 1}}) {
+		const color = '#FFFFFF';
+		super({
+			vertices: [
+				{x: 1.53, y: 0, z: 0.25},
+				{x: 1.08, y: 1.08, z: 0.25},
+				{x: 0, y: 1.53, z: 0.25},
+				{x: -1.08, y: 1.08, z: 0.25},
+				{x: -1.53, y: 0, z: 0.25},
+				{x: -1.08, y: -1.08, z: 0.25},
+				{x: 0, y: -1.53, z: 0.25},
+				{x: 1.08, y: -1.08, z: 0.25},
+				{x: 1.53, y: 0, z: -0.25},
+				{x: 1.08, y: 1.08, z: -0.25},
+				{x: 0, y: 1.53, z: -0.25},
+				{x: -1.08, y: 1.08, z: -0.25},
+				{x: -1.53, y: 0, z: -0.25},
+				{x: -1.08, y: -1.08, z: -0.25},
+				{x: 0, y: -1.53, z: -0.25},
+				{x: 1.08, y: -1.08, z: -0.25},
+				{x: 1.9125, y: 0, z: 0.25},
+				{x: 1.35, y: 1.35, z: 0.25},
+				{x: 0, y: 1.9125, z: 0.25},
+				{x: -1.35, y: 1.35, z: 0.25},
+				{x: -1.9125, y: 0, z: 0.25},
+				{x: -1.35, y: -1.35, z: 0.25},
+				{x: 0, y: -1.9125, z: 0.25},
+				{x: 1.35, y: -1.35, z: 0.25},
+				{x: 1.9125, y: 0, z: -0.25},
+				{x: 1.35, y: 1.35, z: -0.25},
+				{x: 0, y: 1.9125, z: -0.25},
+				{x: -1.35, y: 1.35, z: -0.25},
+				{x: -1.9125, y: 0, z: -0.25},
+				{x: -1.35, y: -1.35, z: -0.25},
+				{x: 0, y: -1.9125, z: -0.25},
+				{x: 1.35, y: -1.35, z: -0.25},
+			],
+			faces: [
+				{indices: [0, 1, 8, 9], color: color},
+				{indices: [1, 2, 9, 10], color: color},
+				{indices: [2, 3, 10, 11], color: color},
+				{indices: [3, 4, 11, 12], color: color},
+				{indices: [4, 5, 12, 13], color: color},
+				{indices: [5, 6, 13, 14], color: color},
+				{indices: [6, 7, 14, 15], color: color},
+				{indices: [0, 7, 8, 15], color: color},
+				{indices: [16, 17, 24, 25], color: color},
+				{indices: [17, 18, 25, 26], color: color},
+				{indices: [18, 19, 26, 27], color: color},
+				{indices: [19, 20, 27, 28], color: color},
+				{indices: [20, 21, 28, 29], color: color},
+				{indices: [21, 22, 29, 30], color: color},
+				{indices: [22, 23, 30, 31], color: color},
+				{indices: [16, 23, 24, 31], color: color},
+				{indices: [10, 11, 26, 27], color: color},
+				{indices: [11, 12, 27, 28], color: color},
+				{indices: [12, 13, 28, 29], color: color},
+				{indices: [13, 14, 29, 30], color: color},
+				{indices: [14, 15, 30, 31], color: color},
+				{indices: [15, 8, 31, 24], color: color},
+				{indices: [8, 31, 24, 25], color: color},
+				{indices: [8, 9, 24, 25], color: color},
+				{indices: [9, 24, 25, 26], color: color},
+				{indices: [9, 10, 25, 26], color: color},
+				{indices: [10, 25, 26, 27], color: color},
+				{indices: [2, 3, 18, 19], color: color},
+				{indices: [3, 18, 19, 20], color: color},
+				{indices: [3, 4, 19, 20], color: color},
+				{indices: [4, 19, 20, 21], color: color},
+				{indices: [4, 5, 20, 21], color: color},
+				{indices: [5, 20, 21, 22], color: color},
+				{indices: [5, 6, 21, 22], color: color},
+				{indices: [6, 21, 22, 23], color: color},
+				{indices: [6, 7, 22, 23], color: color},
+				{indices: [7, 22, 23, 16], color: color},
+				{indices: [7, 0, 23, 16], color: color},
+				{indices: [0, 23, 16, 17], color: color},
+				{indices: [0, 1, 16, 17], color: color},
+				{indices: [1, 16, 17, 18], color: color},
+				{indices: [1, 2, 17, 18], color: color},
+				{indices: [2, 17, 18, 19], color: color},
+			],
+			position: position,
+			rotation: rotation,
+			scale: scale,
+		});
+	}
+	pointCollide(point) {
+		const local = vec3.create();
+		vec3.subtract(local, [point.x, point.y, point.z], [this.position.x, this.position.y, this.position.z]);
+		const invRot = quat.create();
+		quat.invert(invRot, this.rotation);
+		vec3.transformQuat(local, local, invRot);
+		local[0] /= this.scale.x;
+		local[1] /= this.scale.y;
+		local[2] /= this.scale.z;
+
+		const r = Math.sqrt(local[0] * local[0] + local[1] * local[1]);
+		const radius = 2;
+		const halfThickness = 0.25; // 0.5 * 0.5
+		return r <= radius && Math.abs(local[2]) <= halfThickness;
+	}
 }
