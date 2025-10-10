@@ -52,6 +52,10 @@ function cameraTransform(cam, state) {
 		z: player.position.z + offsetRotated[2],
 	};
 
+	const speed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y + player.velocity.z * player.velocity.z);
+	const targetFov = 60 + (speed / 25) * 30;
+	cam.fov += (targetFov - cam.fov) * 0.1;
+
 	cam.position = lerp3(cam.position, targetPos, 0.15);
 	cam.rotation = quat.slerp(quat.create(), cam.rotation, player.rotation, 0.1);
 	return cam;
