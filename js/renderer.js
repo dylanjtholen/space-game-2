@@ -143,32 +143,68 @@ export function render(camera, scene) {
 	mat4.perspective(projectionMatrix, (camera.fov * Math.PI) / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 	mat4.multiply(vpMatrix, projectionMatrix, viewMatrix);
 
+	const batches = new Map();
 	[...scene.objects, ...scene.players].forEach((object) => {
 		const obj = object.getRenderable();
-		// model transform: compose rotation, translation and scale
-		const modelMatrix = mat4.create();
-		const objQuat = obj.rotation;
-		mat4.fromRotationTranslationScale(modelMatrix, objQuat, [obj.position.x, obj.position.y, obj.position.z], [obj.scale.x, obj.scale.y, obj.scale.z]);
+		(obj.faces || []).forEach((face) => {
+			const key = face.texture || (face.color ? face.color.toString() : 'default');
+			if (!batches.has(key)) batches.set(key, []);
+			batches.get(key).push({obj, face});
+		});
+	});
 
-		const mvpMatrix = mat4.create();
-		mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
-		gl.uniformMatrix4fv(glLocations.mvp, false, mvpMatrix);
+	for (const [key, group] of batches.entries()) {
+		// Bind texture or set color once per batch
+		let tex = null;
+		let useTexture = false;
+		let color = [1, 1, 1, 1];
+		if (group[0].face.texture) {
+			const img = getAsset(group[0].face.texture);
+			if (img) {
+				tex = textureCache.get(group[0].face.texture);
+				if (!tex) {
+					tex = createGLTextureFromImage(img);
+					textureCache.set(group[0].face.texture, tex);
+				}
+				gl.bindTexture(gl.TEXTURE_2D, tex);
+				gl.activeTexture(gl.TEXTURE0);
+				gl.uniform1i(glLocations.useTexture, 1);
+				gl.uniform1i(glLocations.texture, 0);
+				useTexture = true;
+			} else {
+				gl.uniform1i(glLocations.useTexture, 0);
+				if (group[0].face.color) color = group[0].face.color;
+				gl.uniform4fv(glLocations.color, color);
+			}
+		} else {
+			gl.uniform1i(glLocations.useTexture, 0);
+			color = group[0].face.color ? hexToRgb(group[0].face.color) : [1, 1, 1, 1];
+			gl.uniform4fv(glLocations.color, color);
+		}
 
-		const positionLocation = glLocations.position;
-		const texLocation = glLocations.texcoord;
-		const useTextureLocation = glLocations.useTexture;
-		const colorLocation = glLocations.color;
-		const textureLocation = glLocations.texture;
-		const texBuf = gl.createBuffer();
+		// Draw all faces
+		for (const {obj, face} of group) {
+			// model transform: compose rotation, translation and scale
+			const modelMatrix = mat4.create();
+			const objQuat = obj.rotation;
+			mat4.fromRotationTranslationScale(modelMatrix, objQuat, [obj.position.x, obj.position.y, obj.position.z], [obj.scale.x, obj.scale.y, obj.scale.z]);
 
-		const faces = obj.faces || [];
-		faces.forEach((face) => {
+			const mvpMatrix = mat4.create();
+			mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
+			gl.uniformMatrix4fv(glLocations.mvp, false, mvpMatrix);
+
+			const positionLocation = glLocations.position;
+			const texLocation = glLocations.texcoord;
+			const texBuf = gl.createBuffer();
+
+			// Position buffer
 			const posBuf = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
 			gl.bufferData(gl.ARRAY_BUFFER, face.positions, gl.STATIC_DRAW);
 			gl.enableVertexAttribArray(positionLocation);
 			gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
+			// Texcoord buffer
 			if (face.texcoords) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
 				gl.bufferData(gl.ARRAY_BUFFER, face.texcoords, gl.STATIC_DRAW);
@@ -179,32 +215,7 @@ export function render(camera, scene) {
 				gl.vertexAttrib2f(texLocation, 0, 0);
 			}
 
-			if (face.texture) {
-				const img = getAsset(face.texture);
-				if (img) {
-					let tex = textureCache.get(face.texture);
-					if (!tex) {
-						tex = createGLTextureFromImage(img);
-						textureCache.set(face.texture, tex);
-					} else {
-						gl.bindTexture(gl.TEXTURE_2D, tex);
-					}
-					gl.activeTexture(gl.TEXTURE0);
-					gl.uniform1i(useTextureLocation, 1);
-					gl.uniform1i(textureLocation, 0);
-				} else {
-					// texture name provided but not loaded yet: fallback to color if present
-					gl.uniform1i(useTextureLocation, 0);
-					if (face.color) gl.uniform4fv(colorLocation, face.color);
-					else gl.uniform4fv(colorLocation, [1, 1, 1, 1]);
-				}
-			} else {
-				gl.uniform1i(useTextureLocation, 0);
-				const color = face.color ? hexToRgb(face.color) : [1, 1, 1, 1];
-				gl.uniform4fv(colorLocation, color);
-			}
-
 			gl.drawArrays(gl.TRIANGLES, 0, 3);
-		});
-	});
+		}
+	}
 }
