@@ -5,6 +5,15 @@ const {mat4, vec3, quat} = glMatrix;
 
 let gl;
 let shaderProgram;
+// Cache uniform and attribute locations
+const glLocations = {
+	mvp: null,
+	position: null,
+	texcoord: null,
+	useTexture: null,
+	color: null,
+	texture: null,
+};
 const textureCache = new Map();
 
 // Resize the canvas drawing buffer to match its displayed size (handles devicePixelRatio)
@@ -98,6 +107,14 @@ export async function initRenderer(canvas) {
 	gl.enable(gl.DEPTH_TEST);
 	gl.clearColor(0, 0, 0, 1);
 
+	// Cache uniform and attribute locations after linking
+	glLocations.mvp = gl.getUniformLocation(shaderProgram, 'uMVPMatrix');
+	glLocations.position = gl.getAttribLocation(shaderProgram, 'aPosition');
+	glLocations.texcoord = gl.getAttribLocation(shaderProgram, 'aTexcoord');
+	glLocations.useTexture = gl.getUniformLocation(shaderProgram, 'uUseTexture');
+	glLocations.color = gl.getUniformLocation(shaderProgram, 'uColor');
+	glLocations.texture = gl.getUniformLocation(shaderProgram, 'uTexture');
+
 	// make sure the drawing buffer matches the displayed size on init
 	resizeCanvasToDisplaySize(canvas);
 	gl.viewport(0, 0, canvas.width, canvas.height);
@@ -135,14 +152,14 @@ export function render(camera, scene) {
 
 		const mvpMatrix = mat4.create();
 		mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
-		const mvpLocation = gl.getUniformLocation(shaderProgram, 'uMVPMatrix');
-		gl.uniformMatrix4fv(mvpLocation, false, mvpMatrix);
+		gl.uniformMatrix4fv(glLocations.mvp, false, mvpMatrix);
 
-		const positionLocation = gl.getAttribLocation(shaderProgram, 'aPosition');
-		const texLocation = gl.getAttribLocation(shaderProgram, 'aTexcoord');
-		const useTextureLocation = gl.getUniformLocation(shaderProgram, 'uUseTexture');
-		const colorLocation = gl.getUniformLocation(shaderProgram, 'uColor');
-		const textureLocation = gl.getUniformLocation(shaderProgram, 'uTexture');
+		const positionLocation = glLocations.position;
+		const texLocation = glLocations.texcoord;
+		const useTextureLocation = glLocations.useTexture;
+		const colorLocation = glLocations.color;
+		const textureLocation = glLocations.texture;
+		const texBuf = gl.createBuffer();
 
 		const faces = obj.faces || [];
 		faces.forEach((face) => {
@@ -153,7 +170,6 @@ export function render(camera, scene) {
 			gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
 			if (face.texcoords) {
-				const texBuf = gl.createBuffer();
 				gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
 				gl.bufferData(gl.ARRAY_BUFFER, face.texcoords, gl.STATIC_DRAW);
 				gl.enableVertexAttribArray(texLocation);
