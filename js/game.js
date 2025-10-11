@@ -1,4 +1,5 @@
 const {quat, vec3} = glMatrix;
+import {CONSTANTS} from './consts.js';
 import {cube, ship, Ring} from './premadeModels.js';
 
 const keymap = {
@@ -37,7 +38,7 @@ export function tick(scene, dt = 1 / 60) {
 
 function controls(dt, player) {
 	// get forward and right vectors from camera rotation
-	const moveSpeed = 6.0 * (keys['boost'] ? 3 : 1);
+	const moveSpeed = 6.0 * (keys['boost'] ? 3 : keys['brake'] ? 0.1 : 1);
 	const rotSpeed = Math.PI / 2;
 	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], player.rotation);
 	const right = vec3.transformQuat(vec3.create(), [1, 0, 0], player.rotation);
@@ -48,10 +49,9 @@ function controls(dt, player) {
 	player.velocity.z += moveVec[2];
 
 	//clamp
-	const maxSpeed = 25;
 	const speed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y + player.velocity.z * player.velocity.z);
-	if (speed > maxSpeed) {
-		const scale = maxSpeed / speed;
+	if (speed > CONSTANTS.SHIPS.MAX_SPEED) {
+		const scale = CONSTANTS.SHIPS.MAX_SPEED / speed;
 		player.velocity.x *= scale;
 		player.velocity.y *= scale;
 		player.velocity.z *= scale;
@@ -62,7 +62,7 @@ function controls(dt, player) {
 	const velNorm = vec3.normalize(vec3.create(), [player.velocity.x, player.velocity.y, player.velocity.z]);
 	const alignment = vec3.dot(forwardNorm, velNorm) ** 3; // 1 means aligned, -1 means opposite, 0 means perpendicular
 	const drag = 1 - Math.abs(alignment); // 0 means no drag, 1 means full drag
-	const dragFactor = 1 - drag * (keys['boost'] ? 0 : 0.05);
+	const dragFactor = 1 - drag * (keys['brake'] ? 1 : 0.5) * dt;
 	player.velocity.x *= dragFactor;
 	player.velocity.y *= dragFactor;
 	player.velocity.z *= dragFactor;

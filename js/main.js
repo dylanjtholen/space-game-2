@@ -4,6 +4,7 @@ import {loadAllAssets} from './assetLoader.js';
 const {quat, vec3} = glMatrix;
 import Model from './model.js';
 import {lerp3} from './utils.js';
+import {CONSTANTS} from './consts.js';
 
 let gameState;
 
@@ -53,7 +54,7 @@ function cameraTransform(cam, state) {
 	};
 
 	const speed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y + player.velocity.z * player.velocity.z);
-	const targetFov = 60 + (speed / 25) * 30;
+	const targetFov = 60 + (speed / CONSTANTS.SHIPS.MAX_SPEED) * 20;
 	cam.fov += (targetFov - cam.fov) * 0.1;
 
 	cam.position = lerp3(cam.position, targetPos, 0.15);
