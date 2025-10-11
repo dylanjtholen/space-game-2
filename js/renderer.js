@@ -1,7 +1,7 @@
 import {getAsset} from './assetLoader.js';
 import {hexToRgb} from './utils.js';
 
-const {mat4, vec3, quat} = glMatrix;
+import {mat4, vec3, quat} from 'gl-matrix';
 
 let gl;
 let shaderProgram;

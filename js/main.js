@@ -1,7 +1,7 @@
 import {render, initRenderer} from './renderer.js';
 import {tick, initGame} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
-const {quat, vec3} = glMatrix;
+import {vec3, quat} from 'gl-matrix';
 import Model from './model.js';
 import {lerp3} from './utils.js';
 import {CONSTANTS} from './consts.js';
@@ -60,4 +60,39 @@ function cameraTransform(cam, state) {
 	cam.position = lerp3(cam.position, targetPos, 0.15);
 	cam.rotation = quat.slerp(quat.create(), cam.rotation, player.rotation, 0.1);
 	return cam;
+}
+
+const keymap = {
+	w: 'look_up',
+	s: 'look_down',
+	a: 'look_left',
+	d: 'look_right',
+	arrowup: 'look_up',
+	arrowdown: 'look_down',
+	arrowleft: 'look_left',
+	arrowright: 'look_right',
+	q: 'roll_left',
+	e: 'roll_right',
+	shift: 'boost',
+	' ': 'brake',
+};
+const keys = {};
+window.addEventListener('keydown', (e) => {
+	keys[keymap[e.key.toLowerCase()]] = true;
+	keyEvent();
+});
+window.addEventListener('keyup', (e) => {
+	keys[keymap[e.key.toLowerCase()]] = false;
+	keyEvent();
+});
+
+function keyEvent() {
+	if (false) {
+		//check if online later
+	} else {
+		//offline, only 1 player
+		const player = gameState.players[gameState.currentPlayer];
+		if (!player) return;
+		player.keys = {...keys};
+	}
 }

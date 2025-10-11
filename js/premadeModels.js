@@ -1,5 +1,5 @@
 import Model from './model.js';
-const {quat, vec3} = glMatrix;
+import {vec3, quat} from 'gl-matrix';
 export function cube(texture) {
 	return new Model({
 		vertices: [
