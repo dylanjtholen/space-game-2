@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html>
+	<head>
+		<link rel="stylesheet" href="style.css" />
+	</head>
 	<body>
-		<h1>Space-Game-Rewritten</h1>
-
-		This is a rewrite of <a href="https://github.com/dylanjtholen/space-game">space-game</a>, except less shit.<br />
-		<image src="image.png">soup cube</a><br>
-
-		<video src="vid_demo.mp4" controls width="480">video</video><br>
-
-        <a href="game.html">play it here</a>
-
-		Currently it has very little, just a basic 3d renderer using webgl and a few models. It's very laggy right now, but I plan to fix that in the coming weeks. If you want to try it out, just serve index.html planned features: - multiplayer - shooting and stuff - maybe a race mode/time trial thing
+		<canvas id="gameCanvas"></canvas>
+		<script type="importmap">
+			{
+				"imports": {
+					"gl-matrix": "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js"
+				}
+			}
+		</script>
+		<script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
+		<script type="module" src="js/main.js"></script>
 	</body>
 </html>

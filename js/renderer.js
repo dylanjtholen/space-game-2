@@ -1,5 +1,7 @@
 import {getAsset} from './assetLoader.js';
 import {hexToRgb} from './utils.js';
+import {Player} from './game.js';
+import {ship} from './premadeModels.js';
 
 import {mat4, vec3, quat} from 'gl-matrix';
 
@@ -145,7 +147,8 @@ export function render(camera, scene) {
 
 	const batches = new Map();
 	[...scene.objects, ...scene.players].forEach((object) => {
-		const obj = object.getRenderable();
+		console.log(object);
+		const obj = getRenderable(object);
 		(obj.faces || []).forEach((face) => {
 			const key = face.texture || (face.color ? face.color.toString() : 'default');
 			if (!batches.has(key)) batches.set(key, []);
@@ -223,4 +226,63 @@ export function render(camera, scene) {
 			gl.drawArrays(gl.TRIANGLES, 0, 3);
 		}
 	}
+}
+
+function getRenderable(object) {
+	if (object instanceof Player || object.uuid) {
+		return ship().getRenderable();
+	}
+	if (object.getRenderable) {
+		return object.getRenderable();
+	}
+	const faces = [];
+	for (const f of object.faces) {
+		const idx = f.indices;
+		if (!idx || idx.length < 3) continue;
+
+		const pushTriangle = (a, b, c, texcoordsArray) => {
+			const posArr = new Float32Array(9);
+			const verts = [a, b, c];
+			for (let i = 0; i < 3; i++) {
+				const v = object.vertices[verts[i]];
+				posArr[i * 3 + 0] = v.x;
+				posArr[i * 3 + 1] = v.y;
+				posArr[i * 3 + 2] = v.z;
+			}
+			let tex = null;
+			if (texcoordsArray) {
+				tex = new Float32Array(6);
+				for (let i = 0; i < 3; i++) {
+					const t = texcoordsArray[i] || [0, 0];
+					tex[i * 2 + 0] = t[0];
+					tex[i * 2 + 1] = t[1];
+				}
+			}
+			const texture = f.texture || null;
+			const color = f.color || null;
+			faces.push({positions: posArr, texcoords: tex, texture, color});
+		};
+
+		if (idx.length === 3) {
+			// single triangle
+			pushTriangle(idx[0], idx[1], idx[2], f.texcoords);
+		} else if (idx.length === 4) {
+			// quad: split into two triangles (0,1,2) and (0,2,3)
+			const tc = f.texcoords || [];
+			pushTriangle(idx[0], idx[1], idx[2], [tc[0], tc[1], tc[2]]);
+			pushTriangle(idx[1], idx[2], idx[3], [tc[1], tc[2], tc[3]]);
+		} else {
+			// more than 4 indices: triangle fan
+			const tc = f.texcoords || [];
+			for (let i = 1; i < idx.length - 1; i++) {
+				pushTriangle(idx[0], idx[i], idx[i + 1], [tc[0], tc[i], tc[i + 1]]);
+			}
+		}
+	}
+	return {
+		position: object.position,
+		rotation: object.rotation,
+		scale: object.scale,
+		faces: faces,
+	};
 }

@@ -1,5 +1,5 @@
 import {render, initRenderer} from './renderer.js';
-import {tick, initGame} from './game.js';
+import {tick, initGame, Player, addPlayer} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
 import {vec3, quat} from 'gl-matrix';
 import Model from './model.js';
@@ -7,15 +7,42 @@ import {lerp3} from './utils.js';
 import {CONSTANTS} from './consts.js';
 
 let gameState;
+let currentPlayer = 0;
+
+const socket = io();
+
+socket.on('joinedRoom', (data) => {
+	if (data.success) {
+		currentPlayer = data.playerIndex;
+		gameState = data.state;
+		for (let i = 0; i < gameState.players.length; i++) {
+			gameState.players[i] = Object.assign(new Player({}), gameState.players[i]);
+		}
+		for (let i = 0; i < gameState.objects.length; i++) {
+			gameState.objects[i] = Object.assign(new Model({}), gameState.objects[i]);
+		}
+	} else {
+		console.error(data.message);
+	}
+});
+
+socket.on('gameState', (state) => {
+	gameState = state;
+});
 
 window.addEventListener('DOMContentLoaded', async () => {
 	const canvas = document.getElementById('gameCanvas');
 	await initRenderer(canvas);
-	gameState = initGame();
 	await loadAllAssets();
+	socket.emit('createRoom');
 	requestAnimationFrame(drawLoop);
 	setInterval(tickLoop, 1000 / 60);
 });
+
+function startLocalGame() {
+	gameState = initGame();
+	addPlayer(gameState);
+}
 
 let camera = {
 	position: {x: 0, y: 0, z: 4},
@@ -25,6 +52,7 @@ let camera = {
 
 let lastTime = null;
 function tickLoop() {
+	if (!gameState) return;
 	let time = performance.now();
 	if (!lastTime) lastTime = time;
 	const dt = (time - lastTime) / 1000; // dt is in seconds
@@ -34,12 +62,12 @@ function tickLoop() {
 }
 
 function drawLoop(time) {
-	render(camera, gameState);
+	if (gameState) render(camera, gameState);
 	requestAnimationFrame(drawLoop);
 }
 
 function cameraTransform(cam, state) {
-	const player = state.players[state.currentPlayer];
+	const player = state.players[currentPlayer];
 	if (!player) return cam;
 
 	//target behind and above player
@@ -87,11 +115,12 @@ window.addEventListener('keyup', (e) => {
 });
 
 function keyEvent() {
-	if (false) {
+	if (socket.connected) {
 		//check if online later
+		socket.emit('playerInput', {...keys});
 	} else {
 		//offline, only 1 player
-		const player = gameState.players[gameState.currentPlayer];
+		const player = gameState.players[currentPlayer];
 		if (!player) return;
 		player.keys = {...keys};
 	}

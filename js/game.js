@@ -76,26 +76,25 @@ function controls(dt, player) {
 	quat.normalize(player.rotation, player.rotation);
 }
 
-class Player {
+export class Player {
 	constructor({position = {x: 0, y: 0, z: 0}, rotation = quat.create()}) {
 		this.position = position;
 		this.rotation = rotation;
 		this.velocity = {x: 0, y: 0, z: 0};
 		this.keys = {};
 	}
-
-	getRenderable() {
-		const model = ship();
-		model.position = this.position;
-		model.rotation = this.rotation;
-		return model.getRenderable();
-	}
 }
 
 export function initGame() {
 	return {
-		players: [new Player({})],
-		currentPlayer: 0,
+		players: [],
 		objects: [cube('soup'), new Ring({position: {x: 0, y: 0, z: -10}, scale: {x: 3, y: 3, z: 3}})],
 	};
+}
+
+export function addPlayer(state, uuid) {
+	const player = new Player({});
+	player.uuid = uuid;
+	state.players.push(player);
+	return state.players.length - 1;
 }
