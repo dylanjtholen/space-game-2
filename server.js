@@ -38,7 +38,7 @@ io.on('connection', (socket) => {
 		socket.join(roomId);
 		rooms[roomId] = initGame();
 		const playerIndex = addPlayer(rooms[roomId], userUUID);
-		socket.emit('joinedRoom', {success: true, roomId: roomId, playerIndex: playerIndex, state: rooms[roomId]});
+		socket.emit('joinedRoom', {success: true, roomId: roomId, playerIndex: playerIndex, state: serialize(rooms[roomId])});
 		startTickLoop(roomId);
 	});
 	socket.on('joinRoom', (roomId) => {
@@ -47,7 +47,7 @@ io.on('connection', (socket) => {
 			clientInfo[socket.id] = {roomId: roomId, userUUID: userUUID};
 			socket.join(roomId);
 			const playerIndex = addPlayer(rooms[roomId], userUUID);
-			socket.emit('joinedRoom', {success: true, roomId: roomId, playerIndex: playerIndex, state: rooms[roomId]});
+			socket.emit('joinedRoom', {success: true, roomId: roomId, playerIndex: playerIndex, state: serialize(rooms[roomId])});
 		} else {
 			socket.emit('joinedRoom', {success: false, message: 'Room not found'});
 		}
@@ -96,6 +96,38 @@ function startTickLoop(roomId) {
 	let state = rooms[roomId];
 	setInterval(() => {
 		state = tick(state, 1 / 60);
-		io.to(roomId).emit('gameState', state);
+		io.to(roomId).emit('gameState', serialize(state));
 	}, 1000 / 60);
+}
+
+function serialize(value) {
+	const seen = new WeakMap();
+	function clone(v) {
+		if (v === null || v === undefined) return v;
+		// Primitive
+		if (typeof v !== 'object') return v;
+		// TypedArrays (Float32Array, Int32Array, etc.)
+		if (ArrayBuffer.isView(v)) return Array.from(v);
+		// Arrays
+		if (Array.isArray(v)) {
+			if (seen.has(v)) return null;
+			const out = [];
+			seen.set(v, out);
+			for (let i = 0; i < v.length; i++) out[i] = clone(v[i]);
+			return out;
+		}
+		// Plain object
+		if (seen.has(v)) return null;
+		const out = {};
+		seen.set(v, out);
+		for (const key of Object.keys(v)) {
+			try {
+				out[key] = clone(v[key]);
+			} catch (e) {
+				out[key] = null;
+			}
+		}
+		return out;
+	}
+	return clone(value);
 }

@@ -15,18 +15,20 @@ socket.on('joinedRoom', (data) => {
 	if (data.success) {
 		currentPlayer = data.playerIndex;
 		gameState = data.state;
-		for (let i = 0; i < gameState.players.length; i++) {
-			gameState.players[i] = Object.assign(new Player({}), gameState.players[i]);
-		}
-		for (let i = 0; i < gameState.objects.length; i++) {
-			gameState.objects[i] = Object.assign(new Model({}), gameState.objects[i]);
-		}
+		console.log('room code is ' + data.roomId);
 	} else {
 		console.error(data.message);
 	}
 });
 
 socket.on('gameState', (state) => {
+	for (let i = 0; i < state.players.length; i++) {
+		if (gameState.players[i]) {
+			//if close enough ignore difference
+			if (Math.hypot(state.players[i].position.x - gameState.players[i].position.x, state.players[i].position.y - gameState.players[i].position.y, state.players[i].position.z - gameState.players[i].position.z) < 5) continue;
+			state.players[i].position = lerp3(gameState.players[i].position, state.players[i].position, 0.5);
+		}
+	}
 	gameState = state;
 });
 
@@ -34,7 +36,17 @@ window.addEventListener('DOMContentLoaded', async () => {
 	const canvas = document.getElementById('gameCanvas');
 	await initRenderer(canvas);
 	await loadAllAssets();
-	socket.emit('createRoom');
+	if (socket.connected) {
+		const searchParams = new URLSearchParams(window.location.search);
+		const roomId = searchParams.get('room');
+		if (roomId) {
+			socket.emit('joinRoom', roomId);
+		} else {
+			socket.emit('createRoom');
+		}
+	} else {
+		startLocalGame();
+	}
 	requestAnimationFrame(drawLoop);
 	setInterval(tickLoop, 1000 / 60);
 });
@@ -62,8 +74,9 @@ function tickLoop() {
 }
 
 function drawLoop(time) {
-	if (gameState) render(camera, gameState);
 	requestAnimationFrame(drawLoop);
+	if (!gameState) return;
+	render(camera, gameState);
 }
 
 function cameraTransform(cam, state) {

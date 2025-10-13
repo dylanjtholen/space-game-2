@@ -1,20 +1,20 @@
 # Space-Game-Rewritten
 
-This is a rewrite of [space-game](https://github.com/dylanjtholen/space-game), except less shit.<br>
+This is a rewrite of [space-game](https://github.com/dylanjtholen/space-game), except less shit.
+
 ![soup cube](image.png)
-soup cube
 
-<video src="https://raw.githubusercontent.com/dylanjtholen/space-game-2/refs/heads/main/vid_demo.mp4"></video>
+## Demo
 
-Currently it has very little, just a basic 3d renderer using webgl and a few models. It's very laggy right now, but I plan to fix that in the coming weeks.
+<video src="vid_demo.mp4" controls width="480">video</video>
 
-If you want to try it out, just serve index.html
+## Try it
 
-planned features:
+-   Single-player: open `index.html` in a browser (or go [here](https://dylanjtholen.is-a.dev/space-game-2)).
+-   Multiplayer: clone the project, run `npm install` and `npm start`, then open `http://localhost:3000` in your browser. The room code is logged in the server console. To join a room, add `?room=ROOMCODE` to the URL.
 
--   multiplayer
--   shooting and stuff
--   maybe a race mode/time trial thing
+## Planned features
 
-<br><br>
-if u couldnt tell i suck at using markdown
+-   Multiplayer improvements
+-   Shooting and stuff idk
+-   Race / time trial mode

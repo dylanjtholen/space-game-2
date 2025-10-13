@@ -147,7 +147,6 @@ export function render(camera, scene) {
 
 	const batches = new Map();
 	[...scene.objects, ...scene.players].forEach((object) => {
-		console.log(object);
 		const obj = getRenderable(object);
 		(obj.faces || []).forEach((face) => {
 			const key = face.texture || (face.color ? face.color.toString() : 'default');
@@ -230,7 +229,10 @@ export function render(camera, scene) {
 
 function getRenderable(object) {
 	if (object instanceof Player || object.uuid) {
-		return ship().getRenderable();
+		let shipModel = ship();
+		shipModel.position = object.position;
+		shipModel.rotation = object.rotation;
+		return shipModel.getRenderable();
 	}
 	if (object.getRenderable) {
 		return object.getRenderable();
