@@ -92,9 +92,10 @@ export function initGame() {
 	};
 }
 
-export function addPlayer(state, uuid) {
+export function addPlayer(state, uuid, name) {
 	const player = new Player({});
 	player.uuid = uuid;
+	player.name = name;
 	state.players.push(player);
 	return state.players.length - 1;
 }

@@ -4,7 +4,36 @@
 		<link rel="stylesheet" href="style.css" />
 	</head>
 	<body>
+		<div id="errorBanner" aria-live="assertive"></div>
 		<canvas id="gameCanvas"></canvas>
+		<div id="mainMenu" class="menu">
+			<h1>Space Game</h1>
+			<input type="text" id="usernameInput" placeholder="Enter Username" />
+			<button id="localGameButton">Local Game</button>
+			<button id="onlineGameButton">Online</button>
+		</div>
+		<div id="onlineMenu" class="menu">
+			<h2>Online Game</h2>
+			<div id="roomListContainer">
+				<div class="room-header">
+					<button class="backToMainButton">Back</button>
+					<h3>Available Rooms</h3>
+					<button id="refreshRoomsButton">Refresh</button>
+				</div>
+				<div id="roomList"></div>
+			</div>
+			<div id="createRoomOptions">
+				<input type="text" id="roomNameInput" placeholder="Room Name" />
+				<input type="password" id="roomPasswordInput" placeholder="Room Password (optional)" />
+				<button id="createRoomButton">Create Room</button>
+			</div>
+		</div>
+		<div id="gameMenu">
+			<div id="chatContainer">
+				<div id="chatMessages"></div>
+				<input type="text" id="chatInput" placeholder="Type a message..." />
+			</div>
+		</div>
 		<script type="importmap">
 			{
 				"imports": {
