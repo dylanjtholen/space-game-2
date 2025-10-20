@@ -40,6 +40,10 @@ body {
 	background-color: #666;
 }
 
+#mainMenu button {
+	width: 100%;
+}
+
 #onlineMenu {
 	display: none;
 }

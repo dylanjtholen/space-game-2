@@ -26,8 +26,8 @@ const io = new Server(server);
 
 const rooms = {};
 const clientInfo = {};
-// Chat rate limiting/storage
-const lastChatAt = new Map(); // socket.id -> last message timestamp
+//chat limiting
+const lastChatAt = new Map(); // socket.id: last message timestamp
 const CHAT_MIN_INTERVAL = 300; // ms between messages
 const CHAT_MAX_LENGTH = 512; // max characters per message
 
@@ -100,13 +100,11 @@ io.on('connection', (socket) => {
 	socket.on('chatMessage', (message) => {
 		const info = clientInfo[socket.id];
 		if (!info || !rooms[info.roomId]) return;
-		// Basic validation and rate-limiting
 		if (typeof message !== 'string') return;
 		const now = Date.now();
 		const last = lastChatAt.get(socket.id) || 0;
 		if (now - last < CHAT_MIN_INTERVAL) return; // too fast
 		lastChatAt.set(socket.id, now);
-		// sanitize/truncate
 		let text = message.replace(/\0/g, '').slice(0, CHAT_MAX_LENGTH).trim();
 		if (!text) return;
 		const username = info.username || 'Guest';
@@ -145,11 +143,14 @@ function getUUID() {
 }
 
 const roomTickIntervals = {};
+const roomSeq = {};
 function startTickLoop(roomId) {
 	let state = rooms[roomId];
 	roomTickIntervals[roomId] = setInterval(() => {
 		state = tick(state, 1 / 60);
-		io.to(roomId).emit('gameState', serialize(state));
+		roomSeq[roomId] = (roomSeq[roomId] || 0) + 1;
+		const payload = {seq: roomSeq[roomId], serverTime: Date.now(), state: serialize(state)};
+		io.to(roomId).emit('gameState', payload);
 	}, 1000 / 60);
 }
 
