@@ -2,10 +2,7 @@ import {vec3, quat} from 'gl-matrix';
 import {CONSTANTS} from './consts.js';
 import {cube, ship, Ring} from './premadeModels.js';
 
-// keys holds current pressed keys (populated by event listeners below)
 export function tick(scene, dt = 1 / 60) {
-	// dt is in seconds
-
 	for (const player of scene.players) {
 		controls(dt, player);
 	}
@@ -14,7 +11,6 @@ export function tick(scene, dt = 1 / 60) {
 }
 
 function controls(dt, player) {
-	// get forward and right vectors from camera rotation
 	const moveSpeed = 6.0 * (player.keys['boost'] ? 3 : player.keys['brake'] ? 0.1 : 1);
 	const rotSpeed = Math.PI / 2;
 	const forward = vec3.transformQuat(vec3.create(), [0, 0, -1], player.rotation);
@@ -25,7 +21,6 @@ function controls(dt, player) {
 	player.velocity.y += moveVec[1];
 	player.velocity.z += moveVec[2];
 
-	//clamp
 	const speed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y + player.velocity.z * player.velocity.z);
 	if (speed > CONSTANTS.SHIPS.MAX_SPEED) {
 		const scale = CONSTANTS.SHIPS.MAX_SPEED / speed;
@@ -34,11 +29,10 @@ function controls(dt, player) {
 		player.velocity.z *= scale;
 	}
 
-	//apply more drag in directions not aligned with forward
 	const forwardNorm = vec3.normalize(vec3.create(), forward);
 	const velNorm = vec3.normalize(vec3.create(), [player.velocity.x, player.velocity.y, player.velocity.z]);
-	const alignment = vec3.dot(forwardNorm, velNorm) ** 3; // 1 means aligned, -1 means opposite, 0 means perpendicular
-	const drag = 1 - Math.abs(alignment); // 0 means no drag, 1 means full drag
+	const alignment = vec3.dot(forwardNorm, velNorm) ** 3;
+	const drag = 1 - Math.abs(alignment);
 	const dragFactor = 1 - drag * (player.keys['brake'] ? 1 : 0.5) * dt;
 	player.velocity.x *= dragFactor;
 	player.velocity.y *= dragFactor;
@@ -88,7 +82,10 @@ export class Player {
 export function initGame() {
 	return {
 		players: [],
-		objects: [cube('soup'), new Ring({position: {x: 0, y: 0, z: -10}, scale: {x: 3, y: 3, z: 3}})],
+		objects: [
+			{type: 'cube', texture: 'soup', position: {x: 0, y: 0, z: 0}, scale: {x: 1, y: 1, z: 1}},
+			{type: 'ring', position: {x: 0, y: 0, z: -10}, scale: {x: 3, y: 3, z: 3}},
+		],
 	};
 }
 

@@ -1,13 +1,14 @@
 import {getAsset} from './assetLoader.js';
 import {hexToRgb} from './utils.js';
 import {Player} from './game.js';
-import {ship} from './premadeModels.js';
+import Model from './model.js';
+import {cube, ship, Ring} from './premadeModels.js';
 
 import {mat4, vec3, quat} from 'gl-matrix';
 
 let gl;
 let shaderProgram;
-// Cache uniform and attribute locations
+
 const glLocations = {
 	mvp: null,
 	position: null,
@@ -17,8 +18,8 @@ const glLocations = {
 	texture: null,
 };
 const textureCache = new Map();
+const geometryCache = new Map();
 
-// Resize the canvas drawing buffer to match its displayed size (handles devicePixelRatio)
 function resizeCanvasToDisplaySize(canvas) {
 	const dpr = window.devicePixelRatio || 1;
 	const displayWidth = Math.round(canvas.clientWidth * dpr);
@@ -52,7 +53,6 @@ function isPowerOfTwo(value) {
 	return (value & (value - 1)) === 0;
 }
 
-// Create and configure a WebGL texture from an ImageBitmap or HTMLImageElement
 function createGLTextureFromImage(img) {
 	const tex = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -64,14 +64,12 @@ function createGLTextureFromImage(img) {
 	const pot = isPowerOfTwo(width) && isPowerOfTwo(height);
 
 	if (pot) {
-		// power-of-two: allow repeat and mipmaps
 		gl.generateMipmap(gl.TEXTURE_2D);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 	} else {
-		// non-power-of-two: must use clamp-to-edge and no mipmaps
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -109,7 +107,6 @@ export async function initRenderer(canvas) {
 	gl.enable(gl.DEPTH_TEST);
 	gl.clearColor(0, 0, 0, 1);
 
-	// Cache uniform and attribute locations after linking
 	glLocations.mvp = gl.getUniformLocation(shaderProgram, 'uMVPMatrix');
 	glLocations.position = gl.getAttribLocation(shaderProgram, 'aPosition');
 	glLocations.texcoord = gl.getAttribLocation(shaderProgram, 'aTexcoord');
@@ -117,33 +114,137 @@ export async function initRenderer(canvas) {
 	glLocations.color = gl.getUniformLocation(shaderProgram, 'uColor');
 	glLocations.texture = gl.getUniformLocation(shaderProgram, 'uTexture');
 
-	// make sure the drawing buffer matches the displayed size on init
 	resizeCanvasToDisplaySize(canvas);
 	gl.viewport(0, 0, canvas.width, canvas.height);
+
+	if (_shipRenderable && _shipRenderable.faces) prewarmRenderable(_shipRenderable, true);
 }
 
+export function prewarmRenderable(renderable) {
+	if (!gl || !renderable || !renderable.faces) return;
+
+	let totalVerts = 0;
+	for (const f of renderable.faces) {
+		const verts = f.positions ? f.positions.length / 3 : 0;
+		totalVerts += verts;
+	}
+	if (totalVerts === 0) return;
+
+	const combinedPos = new Float32Array(totalVerts * 3);
+	let combinedTex = null;
+	let hasTex = false;
+	for (const f of renderable.faces) {
+		if (f.texcoords) {
+			hasTex = true;
+			break;
+		}
+	}
+	if (hasTex) combinedTex = new Float32Array(totalVerts * 2);
+
+	let vertOffset = 0;
+	for (const f of renderable.faces) {
+		const pos = f.positions;
+		const vCount = pos ? pos.length / 3 : 0;
+
+		for (let i = 0; i < vCount * 3; i++) combinedPos[vertOffset * 3 + i] = pos[i];
+
+		if (hasTex) {
+			if (f.texcoords) {
+				const tc = f.texcoords;
+				for (let i = 0; i < vCount * 2; i++) combinedTex[vertOffset * 2 + i] = tc[i] || 0;
+			} else {
+				for (let i = 0; i < vCount * 2; i++) combinedTex[vertOffset * 2 + i] = 0;
+			}
+		}
+		f._vertexOffset = vertOffset;
+		f._vertexCount = vCount;
+		vertOffset += vCount;
+	}
+
+	try {
+		renderable._combinedPosBuf = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, renderable._combinedPosBuf);
+		gl.bufferData(gl.ARRAY_BUFFER, combinedPos, gl.STATIC_DRAW);
+		if (hasTex) {
+			renderable._combinedTexBuf = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, renderable._combinedTexBuf);
+			gl.bufferData(gl.ARRAY_BUFFER, combinedTex, gl.STATIC_DRAW);
+		}
+		if (arguments[1]) renderable._shared = true;
+	} catch (e) {
+		console.warn('prewarmRenderable failed', e);
+	}
+}
+
+export function cleanupRenderable(renderable) {
+	if (!gl || !renderable || !renderable.faces) return;
+
+	if (renderable._shared) return;
+	if (renderable._combinedPosBuf) {
+		try {
+			gl.deleteBuffer(renderable._combinedPosBuf);
+		} catch (e) {}
+		delete renderable._combinedPosBuf;
+	}
+	if (renderable._combinedTexBuf) {
+		try {
+			gl.deleteBuffer(renderable._combinedTexBuf);
+		} catch (e) {}
+		delete renderable._combinedTexBuf;
+	}
+
+	for (const face of renderable.faces) {
+		if (face._posBuf) {
+			try {
+				gl.deleteBuffer(face._posBuf);
+			} catch (e) {}
+			delete face._posBuf;
+		}
+		if (face._texBuf) {
+			try {
+				gl.deleteBuffer(face._texBuf);
+			} catch (e) {}
+			delete face._texBuf;
+		}
+	}
+}
+
+const _viewMatrix = mat4.create();
+const _projectionMatrix = mat4.create();
+const _vpMatrix = mat4.create();
+const _modelMatrix = mat4.create();
+const _mvpMatrix = mat4.create();
+const _cameraPos = vec3.create();
+const _cameraTarget = vec3.create();
+const _up = vec3.create();
+const _tmpForward = vec3.create();
+const FORWARD_VEC = vec3.fromValues(0, 0, -1);
+const UP_VEC = vec3.fromValues(0, 1, 0);
+
+const _shipTemplate = ship();
+const _shipRenderable = _shipTemplate.getRenderable();
+
+const _objPosArr = [0, 0, 0];
+const _objScaleArr = [1, 1, 1];
 export function render(camera, scene) {
 	if (!gl) throw new Error('initRenderer has not been called');
-	// Resize each frame if the canvas was resized (or devicePixelRatio changed)
+
 	if (resizeCanvasToDisplaySize(gl.canvas)) {
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	const viewMatrix = mat4.create();
-	const projectionMatrix = mat4.create();
-	const vpMatrix = mat4.create();
-
 	const cameraQuat = camera.rotation;
-	const cameraPos = vec3.fromValues(camera.position.x, camera.position.y, camera.position.z);
-	const cameraTarget = vec3.create();
-	vec3.add(cameraTarget, cameraPos, vec3.transformQuat(vec3.create(), [0, 0, -1], cameraQuat));
-	const up = vec3.transformQuat(vec3.create(), [0, 1, 0], cameraQuat);
-	mat4.lookAt(viewMatrix, cameraPos, cameraTarget, up);
-	// use the drawing buffer width/height (already scaled by devicePixelRatio)
-	mat4.perspective(projectionMatrix, (camera.fov * Math.PI) / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000);
-	mat4.multiply(vpMatrix, projectionMatrix, viewMatrix);
+	_cameraPos[0] = camera.position.x;
+	_cameraPos[1] = camera.position.y;
+	_cameraPos[2] = camera.position.z;
+	vec3.transformQuat(_tmpForward, FORWARD_VEC, cameraQuat);
+	vec3.add(_cameraTarget, _cameraPos, _tmpForward);
+	vec3.transformQuat(_up, UP_VEC, cameraQuat);
+	mat4.lookAt(_viewMatrix, _cameraPos, _cameraTarget, _up);
+	mat4.perspective(_projectionMatrix, (camera.fov * Math.PI) / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000);
+	mat4.multiply(_vpMatrix, _projectionMatrix, _viewMatrix);
 
 	const batches = new Map();
 	[...scene.objects, ...scene.players].forEach((object) => {
@@ -183,62 +284,121 @@ export function render(camera, scene) {
 			gl.uniform4fv(glLocations.color, color);
 		}
 
-		// Draw all faces
+		let lastObj = null;
 		for (const {obj, face} of group) {
-			// compose rotation, translation and scale
-			const modelMatrix = mat4.create();
 			const objQuat = obj.rotation;
-			mat4.fromRotationTranslationScale(modelMatrix, objQuat, [obj.position.x, obj.position.y, obj.position.z], [obj.scale.x, obj.scale.y, obj.scale.z]);
 
-			const mvpMatrix = mat4.create();
-			mat4.multiply(mvpMatrix, vpMatrix, modelMatrix);
-			gl.uniformMatrix4fv(glLocations.mvp, false, mvpMatrix);
-
+			_objPosArr[0] = obj.position.x;
+			_objPosArr[1] = obj.position.y;
+			_objPosArr[2] = obj.position.z;
+			_objScaleArr[0] = obj.scale.x;
+			_objScaleArr[1] = obj.scale.y;
+			_objScaleArr[2] = obj.scale.z;
+			mat4.fromRotationTranslationScale(_modelMatrix, objQuat, _objPosArr, _objScaleArr);
+			mat4.multiply(_mvpMatrix, _vpMatrix, _modelMatrix);
+			gl.uniformMatrix4fv(glLocations.mvp, false, _mvpMatrix);
 			const positionLocation = glLocations.position;
 			const texLocation = glLocations.texcoord;
 
-			if (!face._posBuf) {
-				face._posBuf = gl.createBuffer();
-				gl.bindBuffer(gl.ARRAY_BUFFER, face._posBuf);
-				gl.bufferData(gl.ARRAY_BUFFER, face.positions, gl.STATIC_DRAW);
-			} else {
-				gl.bindBuffer(gl.ARRAY_BUFFER, face._posBuf);
-			}
-			gl.enableVertexAttribArray(positionLocation);
-			gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-
-			if (face.texcoords) {
-				if (!face._texBuf) {
-					face._texBuf = gl.createBuffer();
-					gl.bindBuffer(gl.ARRAY_BUFFER, face._texBuf);
-					gl.bufferData(gl.ARRAY_BUFFER, face.texcoords, gl.STATIC_DRAW);
-				} else {
-					gl.bindBuffer(gl.ARRAY_BUFFER, face._texBuf);
+			if (obj._combinedPosBuf) {
+				if (obj !== lastObj) {
+					gl.bindBuffer(gl.ARRAY_BUFFER, obj._combinedPosBuf);
+					gl.enableVertexAttribArray(positionLocation);
+					gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+					if (obj._combinedTexBuf) {
+						gl.bindBuffer(gl.ARRAY_BUFFER, obj._combinedTexBuf);
+						gl.enableVertexAttribArray(texLocation);
+						gl.vertexAttribPointer(texLocation, 2, gl.FLOAT, false, 0, 0);
+					} else {
+						gl.disableVertexAttribArray(texLocation);
+						gl.vertexAttrib2f(texLocation, 0, 0);
+					}
+					lastObj = obj;
 				}
-				gl.enableVertexAttribArray(texLocation);
-				gl.vertexAttribPointer(texLocation, 2, gl.FLOAT, false, 0, 0);
+				const start = face._vertexOffset || 0;
+				const count = face._vertexCount || 0;
+				if (count > 0) gl.drawArrays(gl.TRIANGLES, start, count);
 			} else {
-				gl.disableVertexAttribArray(texLocation);
-				gl.vertexAttrib2f(texLocation, 0, 0);
+				if (!face._posBuf) {
+					face._posBuf = gl.createBuffer();
+					gl.bindBuffer(gl.ARRAY_BUFFER, face._posBuf);
+					gl.bufferData(gl.ARRAY_BUFFER, face.positions, gl.STATIC_DRAW);
+				}
+				gl.bindBuffer(gl.ARRAY_BUFFER, face._posBuf);
+				gl.enableVertexAttribArray(positionLocation);
+				gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+				if (face.texcoords) {
+					if (!face._texBuf) {
+						face._texBuf = gl.createBuffer();
+						gl.bindBuffer(gl.ARRAY_BUFFER, face._texBuf);
+						gl.bufferData(gl.ARRAY_BUFFER, face.texcoords, gl.STATIC_DRAW);
+					} else {
+						gl.bindBuffer(gl.ARRAY_BUFFER, face._texBuf);
+					}
+					gl.enableVertexAttribArray(texLocation);
+					gl.vertexAttribPointer(texLocation, 2, gl.FLOAT, false, 0, 0);
+				} else {
+					gl.disableVertexAttribArray(texLocation);
+					gl.vertexAttrib2f(texLocation, 0, 0);
+				}
+				const vcount = face.positions ? face.positions.length / 3 : 0;
+				if (vcount > 0) gl.drawArrays(gl.TRIANGLES, 0, vcount);
 			}
-
-			gl.drawArrays(gl.TRIANGLES, 0, 3);
 		}
 	}
 }
 
 function getRenderable(object) {
 	if (object instanceof Player || object.uuid) {
-		let shipModel = ship();
-		shipModel.position = object.position;
-		shipModel.rotation = object.rotation;
-		return shipModel.getRenderable();
+		return {position: object.position, rotation: object.rotation, scale: _shipRenderable.scale || {x: 1, y: 1, z: 1}, faces: _shipRenderable.faces};
 	}
 	if (object.getRenderable) {
-		return object.getRenderable();
+		if (object._renderable) return object._renderable;
+		const r = object.getRenderable();
+		object._renderable = r;
+		prewarmRenderable(r);
+		return r;
 	}
+
+	if (object && object.type && !object.getRenderable) {
+		try {
+			let model = null;
+			switch (object.type) {
+				case 'cube':
+					model = cube(object.texture);
+					break;
+				case 'ship':
+					model = ship();
+					break;
+				case 'ring':
+					model = new Ring({position: object.position || {x: 0, y: 0, z: 0}, rotation: object.rotation || quat.create(), scale: object.scale || {x: 1, y: 1, z: 1}});
+					break;
+				default:
+					model = new Model({position: object.position || {x: 0, y: 0, z: 0}, scale: object.scale || {x: 1, y: 1, z: 1}, rotation: object.rotation || quat.create()});
+			}
+			if (object.position) model.position = object.position;
+			if (object.scale) model.scale = object.scale;
+			if (object.rotation) model.rotation = object.rotation;
+			if (object.velocity) model.velocity = object.velocity;
+			const r = model.getRenderable();
+
+			prewarmRenderable(r, true);
+			object._renderable = r;
+			return r;
+		} catch (e) {
+			console.warn('renderer: failed to reconstruct descriptor', e);
+		}
+	}
+	if (object._renderable) return object._renderable;
 	const faces = [];
-	for (const f of object.faces) {
+	if (object.vertices && object.faces) {
+		const key = geometryKey(object);
+		const cached = geometryCache.get(key);
+		if (cached) {
+			return {position: object.position, rotation: object.rotation, scale: object.scale, faces: cached.faces};
+		}
+	}
+	for (const f of object.faces || []) {
 		const idx = f.indices;
 		if (!idx || idx.length < 3) continue;
 
@@ -266,25 +426,55 @@ function getRenderable(object) {
 		};
 
 		if (idx.length === 3) {
-			// single triangle
 			pushTriangle(idx[0], idx[1], idx[2], f.texcoords);
 		} else if (idx.length === 4) {
-			// quad: split into two triangles (0,1,2) and (0,2,3)
 			const tc = f.texcoords || [];
 			pushTriangle(idx[0], idx[1], idx[2], [tc[0], tc[1], tc[2]]);
 			pushTriangle(idx[1], idx[2], idx[3], [tc[1], tc[2], tc[3]]);
 		} else {
-			// more than 4 indices: triangle fan
 			const tc = f.texcoords || [];
 			for (let i = 1; i < idx.length - 1; i++) {
 				pushTriangle(idx[0], idx[i], idx[i + 1], [tc[0], tc[i], tc[i + 1]]);
 			}
 		}
 	}
-	return {
-		position: object.position,
-		rotation: object.rotation,
-		scale: object.scale,
-		faces: faces,
-	};
+	const renderable = {position: object.position, rotation: object.rotation, scale: object.scale, faces};
+
+	if (object.vertices && object.faces) {
+		const key = geometryKey(object);
+		geometryCache.set(key, renderable);
+		prewarmRenderable(renderable, true);
+		return {position: object.position, rotation: object.rotation, scale: object.scale, faces: renderable.faces};
+	}
+	object._renderable = renderable;
+	prewarmRenderable(renderable);
+	return renderable;
+}
+
+function geometryKey(object) {
+	let h = 2166136261 >>> 0;
+	const verts = object.vertices || [];
+	const faces = object.faces || [];
+	h = hashMix(h, verts.length);
+	h = hashMix(h, faces.length);
+	for (let i = 0; i < verts.length; i++) {
+		const v = verts[i];
+		h = hashMix(h, Math.floor((v.x || 0) * 1000));
+		h = hashMix(h, Math.floor((v.y || 0) * 1000));
+		h = hashMix(h, Math.floor((v.z || 0) * 1000));
+		if (i > 20) break;
+	}
+	for (let i = 0; i < faces.length && i < 50; i++) {
+		const f = faces[i];
+		const idx = f.indices || [];
+		h = hashMix(h, idx.length);
+		if (idx.length > 0) h = hashMix(h, idx[0]);
+	}
+	return h.toString(16);
+}
+
+function hashMix(h, v) {
+	h ^= v >>> 0;
+	h = Math.imul(h, 16777619) >>> 0;
+	return h;
 }

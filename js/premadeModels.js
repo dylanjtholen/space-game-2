@@ -127,7 +127,6 @@ export function cube(texture) {
 }
 
 export function ship() {
-	//just a triangle for now
 	let m = new Model({
 		vertices: [
 			{x: -1, y: -0.5, z: 2},
@@ -148,7 +147,6 @@ export function ship() {
 		position: {x: 0, y: 0, z: 0},
 		scale: {x: 0.5, y: 0.5, z: 0.5},
 	});
-	//velocity for players
 	m.velocity = {x: 0, y: 0, z: 0};
 	return m;
 }
@@ -253,7 +251,7 @@ export class Ring extends Model {
 
 		const r = Math.sqrt(local[0] * local[0] + local[1] * local[1]);
 		const radius = 2;
-		const halfThickness = 0.25; // 0.5 * 0.5
+		const halfThickness = 0.25;
 		return r <= radius && Math.abs(local[2]) <= halfThickness;
 	}
 }

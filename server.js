@@ -26,10 +26,9 @@ const io = new Server(server);
 
 const rooms = {};
 const clientInfo = {};
-//chat limiting
-const lastChatAt = new Map(); // socket.id: last message timestamp
-const CHAT_MIN_INTERVAL = 300; // ms between messages
-const CHAT_MAX_LENGTH = 512; // max characters per message
+const lastChatAt = new Map();
+const CHAT_MIN_INTERVAL = 300;
+const CHAT_MAX_LENGTH = 512;
 
 io.on('connection', (socket) => {
 	socket.on('createRoom', (info) => {
@@ -103,7 +102,7 @@ io.on('connection', (socket) => {
 		if (typeof message !== 'string') return;
 		const now = Date.now();
 		const last = lastChatAt.get(socket.id) || 0;
-		if (now - last < CHAT_MIN_INTERVAL) return; // too fast
+		if (now - last < CHAT_MIN_INTERVAL) return;
 		lastChatAt.set(socket.id, now);
 		let text = message.replace(/\0/g, '').slice(0, CHAT_MAX_LENGTH).trim();
 		if (!text) return;
@@ -158,11 +157,11 @@ function serialize(value) {
 	const seen = new WeakMap();
 	function clone(v) {
 		if (v === null || v === undefined) return v;
-		// Primitive
+
 		if (typeof v !== 'object') return v;
-		// TypedArrays (Float32Array, Int32Array, etc.)
+
 		if (ArrayBuffer.isView(v)) return Array.from(v);
-		// Arrays
+
 		if (Array.isArray(v)) {
 			if (seen.has(v)) return null;
 			const out = [];
@@ -170,7 +169,7 @@ function serialize(value) {
 			for (let i = 0; i < v.length; i++) out[i] = clone(v[i]);
 			return out;
 		}
-		// Plain object
+
 		if (seen.has(v)) return null;
 		const out = {};
 		seen.set(v, out);

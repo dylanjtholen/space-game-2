@@ -1,13 +1,15 @@
-import {render, initRenderer} from './renderer.js';
+import {render, initRenderer, cleanupRenderable} from './renderer.js';
 import {tick, initGame, Player, addPlayer} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
 import {vec3, quat} from 'gl-matrix';
 import {menuInit, showError, showMenuTab} from './menu.js';
 import Model from './model.js';
+import {cube, ship, Ring} from './premadeModels.js';
 import {lerp3} from './utils.js';
 import {CONSTANTS} from './consts.js';
 
-const TICK_RATE = 20; // ticks per second
+// Server tick rate (Hz). Used for fixed-timestep local simulation.
+const TICK_RATE = 20;
 const TICK_DT = 1 / TICK_RATE;
 let accumulator = 0;
 let lastRAF = null;
@@ -16,6 +18,7 @@ let loopRunning = false;
 let lastServerStateTime = 0;
 let serverIntervalEstimate = TICK_DT;
 const snapshotBuffer = [];
+// How far behind real time the client renders (seconds) to allow snapshot buffering/interpolation.
 const RENDER_DELAY = 0.1;
 let gameState;
 let currentPlayer = 0;
@@ -63,20 +66,24 @@ socket.on('gameState', (data) => {
 
 		if (payload.seq != null) {
 			if (payload.seq <= lastServerSeq) {
-				return; // old/out-of-order packet
+				return;
 			}
 			lastServerSeq = payload.seq;
 		}
 
 		normalizeStateForInterp(payload.state);
 
+		const MAX_SNAPSHOTS = 10;
 		snapshotBuffer.push({seq: payload.seq, serverTime: payload.serverTime, state: payload.state});
-		if (snapshotBuffer.length > 40) snapshotBuffer.shift();
+		if (snapshotBuffer.length > MAX_SNAPSHOTS) {
+			const old = snapshotBuffer.shift();
+			cleanupSnapshot(old);
+		}
 
 		const recvTime = Date.now();
 		if (lastServerStateTime) {
 			const interval = recvTime - lastServerStateTime;
-			serverIntervalEstimate = (serverIntervalEstimate + interval / 1000) / 2; // smoothing
+			serverIntervalEstimate = (serverIntervalEstimate + interval / 1000) / 2;
 		}
 		lastServerStateTime = recvTime;
 		const sampleOffset = payload.serverTime - recvTime;
@@ -193,6 +200,11 @@ let camera = {
 	fov: 60,
 };
 
+const _camRotOffsetBase = quat.fromEuler(quat.create(), -10, 0, 0);
+const _offsetRot = quat.create();
+const _tmpOffsetVec = vec3.create();
+const _offsetRotated = vec3.create();
+// Copy current positions/rotations into prev* fields so interpolation has a previous reference.
 function snapshotPrevState(state) {
 	if (!state) return;
 	for (const p of state.players || []) {
@@ -223,6 +235,10 @@ function applyPrevFromOldToNew(oldState, newState) {
 	}
 }
 
+// Normalize incoming network state for interpolation:
+// - convert array coordinates back to {x,y,z}
+// - convert rotation arrays to normalized quaternions
+// - rebuild lightweight Model instances from server descriptors when necessary
 function normalizeStateForInterp(state) {
 	if (!state) return;
 	for (const p of state.players || []) {
@@ -238,26 +254,39 @@ function normalizeStateForInterp(state) {
 		if (o.prevPosition && Array.isArray(o.prevPosition)) o.prevPosition = {x: o.prevPosition[0], y: o.prevPosition[1], z: o.prevPosition[2]};
 		if (o.rotation && Array.isArray(o.rotation) && o.rotation.length === 4) o.rotation = quat.normalize(quat.create(), new Float32Array(o.rotation));
 		if (o.prevRotation && Array.isArray(o.prevRotation) && o.prevRotation.length === 4) o.prevRotation = quat.normalize(quat.create(), new Float32Array(o.prevRotation));
-		// if it looks like a Model, reconstruct it
-		if (o.vertices && o.faces && typeof o.getRenderable === 'undefined') {
+		if (o.type && typeof o.getRenderable === 'undefined') {
 			try {
-				const model = new Model({
-					vertices: o.vertices,
-					faces: o.faces,
-					position: o.position || {x: 0, y: 0, z: 0},
-					scale: o.scale || {x: 1, y: 1, z: 1},
-					rotation: o.rotation || quat.create(),
-				});
+				let model = null;
+				switch (o.type) {
+					case 'cube':
+						model = cube(o.texture);
+						break;
+					case 'ship':
+						model = ship();
+						break;
+					case 'ring':
+						model = new Ring({position: o.position || {x: 0, y: 0, z: 0}, rotation: o.rotation || quat.create(), scale: o.scale || {x: 1, y: 1, z: 1}});
+						break;
+					default:
+						model = new Model({position: o.position || {x: 0, y: 0, z: 0}, scale: o.scale || {x: 1, y: 1, z: 1}, rotation: o.rotation || quat.create()});
+				}
+				if (!model) model = new Model({position: o.position || {x: 0, y: 0, z: 0}});
+
+				if (o.position) model.position = o.position;
+				if (o.scale) model.scale = o.scale;
+				if (o.rotation) model.rotation = o.rotation;
 				if (o.velocity) model.velocity = o.velocity;
 				const idx = state.objects.indexOf(o);
 				if (idx !== -1) state.objects[idx] = model;
 			} catch (e) {
-				console.warn('Failed to reconstruct Model from server object', e);
+				console.warn('Failed to reconstruct Model from descriptor', e);
 			}
 		}
 	}
 }
 
+// Produce an interpolated copy of `state` for a given alpha in [0,1].
+// Preserves prototypes for objects that have Model-like prototypes.
 function interpolateState(state, alpha) {
 	if (!state) return state;
 	function clonePreserveProto(orig) {
@@ -308,24 +337,54 @@ function interpolateState(state, alpha) {
 	return s;
 }
 
+// Free GL resources referenced by a pruned snapshot's renderables.
+// Called when old snapshots are dropped from the buffer.
+function cleanupSnapshot(snapshot) {
+	if (!snapshot || !snapshot.state) return;
+	try {
+		const st = snapshot.state;
+
+		for (const o of st.objects || []) {
+			if (!o) continue;
+			if (o._renderable) {
+				try {
+					cleanupRenderable(o._renderable);
+				} catch (e) {}
+				delete o._renderable;
+			}
+		}
+
+		for (const p of st.players || []) {
+			if (!p) continue;
+			if (p._renderable) {
+				try {
+					cleanupRenderable(p._renderable);
+				} catch (e) {}
+				delete p._renderable;
+			}
+		}
+	} catch (e) {
+		console.warn('cleanupSnapshot failed', e);
+	}
+}
+
 function mainLoop(rafTime) {
 	if (!lastRAF) lastRAF = rafTime;
 	let frameDt = (rafTime - lastRAF) / 1000;
 	lastRAF = rafTime;
-	// clamp big frames
+
 	if (frameDt > 0.25) frameDt = 0.25;
 
 	if (localGame) {
 		accumulator += frameDt;
 		while (accumulator >= TICK_DT) {
-			// snapshot previous before tick
 			snapshotPrevState(gameState);
 			gameState = tick(gameState, TICK_DT);
 			accumulator -= TICK_DT;
 		}
 		const alpha = accumulator / TICK_DT;
 		const renderState = interpolateState(gameState, alpha);
-		camera = cameraTransform(camera, gameState);
+		camera = cameraTransform(camera, renderState);
 		render(camera, renderState);
 	} else {
 		const now = Date.now();
@@ -333,7 +392,10 @@ function mainLoop(rafTime) {
 		let renderState = gameState;
 
 		const pruneBefore = renderTime - 5000;
-		while (snapshotBuffer.length > 0 && snapshotBuffer[0].serverTime < pruneBefore) snapshotBuffer.shift();
+		while (snapshotBuffer.length > 0 && snapshotBuffer[0].serverTime < pruneBefore) {
+			const old = snapshotBuffer.shift();
+			cleanupSnapshot(old);
+		}
 
 		if (snapshotBuffer.length >= 2) {
 			let idx = snapshotBuffer.length - 2;
@@ -393,15 +455,14 @@ function cameraTransform(cam, state) {
 	const player = state.players[currentPlayer];
 	if (!player) return cam;
 
-	//target behind and above player
 	const offset = {x: 0, y: 0.25, z: 5};
-	const rotOffset = quat.fromEuler(quat.create(), -10, 0, 0);
-	quat.multiply(rotOffset, player.rotation, rotOffset);
-	const offsetRotated = vec3.transformQuat(vec3.create(), [offset.x, offset.y, offset.z], rotOffset);
+	quat.multiply(_offsetRot, player.rotation, _camRotOffsetBase);
+	vec3.set(_tmpOffsetVec, offset.x, offset.y, offset.z);
+	vec3.transformQuat(_offsetRotated, _tmpOffsetVec, _offsetRot);
 	const targetPos = {
-		x: player.position.x + offsetRotated[0],
-		y: player.position.y + offsetRotated[1],
-		z: player.position.z + offsetRotated[2],
+		x: player.position.x + _offsetRotated[0],
+		y: player.position.y + _offsetRotated[1],
+		z: player.position.z + _offsetRotated[2],
 	};
 
 	const speed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y + player.velocity.z * player.velocity.z);
@@ -455,7 +516,6 @@ function keyEvent() {
 	if (!localGame) {
 		socket.emit('playerInput', {...keys});
 	} else {
-		//offline, only 1 player
 		const player = gameState.players[currentPlayer];
 		if (!player) return;
 		player.keys = {...keys};
