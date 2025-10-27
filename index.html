@@ -28,11 +28,23 @@
 				<button id="createRoomButton">Create Room</button>
 			</div>
 		</div>
-		<div id="gameMenu">
-			<div id="chatContainer">
-				<div id="chatMessages"></div>
-				<input type="text" id="chatInput" placeholder="Type a message..." />
+		<div id="gameMenu"></div>
+		<div id="chatContainer">
+			<div id="chatMessages"></div>
+			<input type="text" id="chatInput" placeholder="Type a message..." />
+		</div>
+		<div id="lobby" class="menu">
+			<div id="playerListContainer">
+				<h3>Players</h3>
+				<ul id="playerList"></ul>
 			</div>
+			<form id="gameSettings">
+				<label for="gameModeDropdown">Game Mode:</label>
+				<select id="gameModeDropdown">
+					<option value="sandbox">Sandbox</option>
+				</select>
+			</form>
+			<button id="startGameButton">Start Game</button>
 		</div>
 		<script type="importmap">
 			{

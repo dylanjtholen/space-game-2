@@ -1,4 +1,4 @@
-import {serverConnected, startLocalGame, getRooms, createRoom, joinRoom, sendMessage} from './main.js';
+import {serverConnected, startLocalGame, getRooms, createRoom, joinRoom, sendMessage, startGame} from './main.js';
 
 let currentTab = 'mainMenu';
 
@@ -6,8 +6,10 @@ export function showMenuTab(tabId) {
 	document.getElementById(currentTab).style.display = 'none';
 	document.getElementById(tabId).style.display = 'flex';
 	currentTab = tabId;
-	if (tabId === 'onlineMenu') {
-		refreshRoomList();
+	switch (tabId) {
+		case 'onlineMenu':
+			refreshRoomList();
+			break;
 	}
 }
 
@@ -43,6 +45,10 @@ export function menuInit() {
 				chatInput.value = '';
 			}
 		}
+	});
+	const startGameButton = document.getElementById('startGameButton');
+	startGameButton.addEventListener('click', () => {
+		startGame();
 	});
 }
 
@@ -87,4 +93,15 @@ export function showError(message, duration = 1000) {
 	} catch (e) {
 		console.error('showError failed', e);
 	}
+}
+
+export function refreshPlayerList(players) {
+	const playerList = document.getElementById('playerList');
+	playerList.innerHTML = '';
+	players.forEach((player) => {
+		const playerElement = document.createElement('li');
+		playerElement.classList.add('player');
+		playerElement.innerText = player;
+		playerList.appendChild(playerElement);
+	});
 }

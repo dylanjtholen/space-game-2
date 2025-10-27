@@ -2,7 +2,7 @@ import {render, initRenderer, cleanupRenderable} from './renderer.js';
 import {tick, initGame, Player, addPlayer} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
 import {vec3, quat} from 'gl-matrix';
-import {menuInit, showError, showMenuTab} from './menu.js';
+import {menuInit, refreshPlayerList, showError, showMenuTab} from './menu.js';
 import Model from './model.js';
 import {cube, ship, Ring} from './premadeModels.js';
 import {lerp3} from './utils.js';
@@ -39,13 +39,17 @@ socket.on('joinedRoom', (data) => {
 	if (data.success) {
 		localGame = false;
 		currentPlayer = data.playerIndex;
-		gameState = data.state;
 		console.log('room code is ' + data.roomId);
-		showMenuTab('gameMenu');
-		startGameLoop();
+		showMenuTab('lobby');
 	} else {
 		console.error(data.message);
 	}
+});
+
+let playerList = [];
+socket.on('playerListUpdate', (data) => {
+	playerList = data.players;
+	refreshPlayerList(playerList);
 });
 
 socket.on('gameState', (data) => {
@@ -112,6 +116,22 @@ socket.on('chatMessage', (payload) => {
 		}
 	} catch (e) {}
 });
+
+socket.on('startFailure', (data) => {
+	showError(data.message);
+});
+
+socket.on('gameStarted', () => {
+	showMenuTab('gameMenu');
+	gameState = initGame();
+	startGameLoop();
+});
+
+export function startGame() {
+	if (!serverConnected || localGame) return;
+	const gameType = document.getElementById('gameModeDropdown').value;
+	socket.emit('startGame', {gameType});
+}
 
 export function sendMessage(message) {
 	if (!serverConnected) return;

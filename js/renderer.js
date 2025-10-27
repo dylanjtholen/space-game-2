@@ -246,8 +246,11 @@ export function render(camera, scene) {
 	mat4.perspective(_projectionMatrix, (camera.fov * Math.PI) / 180, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 	mat4.multiply(_vpMatrix, _projectionMatrix, _viewMatrix);
 
+	if (!scene) return;
 	const batches = new Map();
-	[...scene.objects, ...scene.players].forEach((object) => {
+	const objs = Array.isArray(scene.objects) ? scene.objects : [];
+	const players = Array.isArray(scene.players) ? scene.players : [];
+	[...objs, ...players].forEach((object) => {
 		const obj = getRenderable(object);
 		(obj.faces || []).forEach((face) => {
 			const key = face.texture || (face.color ? face.color.toString() : 'default');
