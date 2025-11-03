@@ -3,8 +3,43 @@ import {CONSTANTS} from './consts.js';
 import {cube, ship, Ring} from './premadeModels.js';
 
 export function tick(scene, dt = 1 / 60) {
+	const rings = [];
+	if (scene.settings.mode === 'race') {
+		for (const obj of scene.objects) {
+			if (obj.type === 'ring') {
+				rings.push(obj);
+			}
+		}
+	}
+
 	for (const player of scene.players) {
 		controls(dt, player);
+
+		if (scene.settings.mode === 'race') {
+			if (!player.finished) {
+				player.raceTime = (player.raceTime || 0) + dt;
+			}
+		}
+		if (scene.settings.mode === 'race') {
+			let nextRing = rings.find((r) => r.id === player.nextRingId);
+			if (!nextRing) continue;
+			let collidesWithPoint = new Ring({position: nextRing.position, rotation: nextRing.rotation, scale: nextRing.scale}).pointCollide(player.position);
+
+			if (collidesWithPoint) {
+				// Player passed through the ring
+				player.nextRingId++;
+				player.currentRing++;
+				if (nextRing.finish) {
+					// win
+					player.finished = true;
+					if (!scene.winner) scene.winner = player;
+				}
+
+				if (!rings.find((r) => r.id === player.nextRingId)) {
+					player.nextRingId = null;
+				}
+			}
+		}
 	}
 
 	return scene;
@@ -76,17 +111,40 @@ export class Player {
 		this.rotation = rotation;
 		this.velocity = {x: 0, y: 0, z: 0};
 		this.keys = {};
+		this.nextRingId = 0;
+		this.currentRing = 0;
+		// Race tracking
+		this.raceTime = 0; // seconds elapsed in current race
+		this.finished = false;
 	}
 }
 
 export function initGame() {
 	return {
 		players: [],
-		objects: [
-			{type: 'cube', texture: 'soup', position: {x: 0, y: 0, z: 0}, scale: {x: 1, y: 1, z: 1}},
-			{type: 'ring', position: {x: 0, y: 0, z: -10}, scale: {x: 3, y: 3, z: 3}},
-		],
+		objects: [],
+		settings: {
+			mode: 'sandbox',
+			map: 'EmptySpace',
+		},
+		winner: null,
 	};
+}
+
+export function loadMap(state, mapName) {
+	let mapData = CONSTANTS.MAPDATA[mapName];
+	if (!mapData) mapData = {objects: []};
+	state.objects = [...mapData.objects];
+	// If this is a race map, reset players' race state
+	if (state && state.settings && state.settings.mode === 'race') {
+		state.totalRings = 0;
+		for (const obj of state.objects) {
+			if (obj.type === 'ring') {
+				state.totalRings++;
+			}
+		}
+	}
+	return state;
 }
 
 export function addPlayer(state, uuid, name) {

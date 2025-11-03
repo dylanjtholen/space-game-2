@@ -17,4 +17,3 @@ This is a rewrite of [space-game](https://github.com/dylanjtholen/space-game), e
 
 -   Multiplayer improvements
 -   Shooting and stuff idk
--   Race / time trial mode

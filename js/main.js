@@ -2,7 +2,7 @@ import {render, initRenderer, cleanupRenderable} from './renderer.js';
 import {tick, initGame, Player, addPlayer} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
 import {vec3, quat} from 'gl-matrix';
-import {menuInit, refreshPlayerList, showError, showMenuTab} from './menu.js';
+import {menuInit, refreshPlayerList, showError, showMenuTab, updateLeaderboard} from './menu.js';
 import Model from './model.js';
 import {cube, ship, Ring} from './premadeModels.js';
 import {lerp3} from './utils.js';
@@ -107,10 +107,14 @@ socket.on('chatMessage', (payload) => {
 		const display = `[${new Date(ts).toLocaleTimeString()}] ${username}: ${text}`;
 		const chatEl = document.getElementById('chatMessages');
 		if (chatEl) {
+			// Only auto-scroll if the user was already at (or near) the bottom.
+			const wasNearBottom = chatEl.scrollTop + chatEl.clientHeight >= chatEl.scrollHeight - 20;
 			const line = document.createElement('div');
 			line.textContent = display;
 			chatEl.appendChild(line);
-			chatEl.scrollTop = chatEl.scrollHeight;
+			if (wasNearBottom) {
+				chatEl.scrollTop = chatEl.scrollHeight;
+			}
 		} else {
 			console.log(display);
 		}
@@ -130,7 +134,9 @@ socket.on('gameStarted', () => {
 export function startGame() {
 	if (!serverConnected || localGame) return;
 	const gameType = document.getElementById('gameModeDropdown').value;
-	socket.emit('startGame', {gameType});
+	const map = document.getElementById('mapDropdown').value;
+	const settings = {mode: gameType, map: map};
+	socket.emit('startGame', settings);
 }
 
 export function sendMessage(message) {
@@ -208,6 +214,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 export function startLocalGame() {
+	alert('local game is kinda broken rn');
 	localGame = true;
 	gameState = initGame();
 	addPlayer(gameState);
@@ -296,6 +303,10 @@ function normalizeStateForInterp(state) {
 				if (o.scale) model.scale = o.scale;
 				if (o.rotation) model.rotation = o.rotation;
 				if (o.velocity) model.velocity = o.velocity;
+				// Preserve descriptor metadata (id, finish, etc.) so client logic can reference it
+				if (typeof o.id !== 'undefined') model.id = o.id;
+				if (typeof o.finish !== 'undefined') model.finish = o.finish;
+
 				const idx = state.objects.indexOf(o);
 				if (idx !== -1) state.objects[idx] = model;
 			} catch (e) {
@@ -404,6 +415,10 @@ function mainLoop(rafTime) {
 		}
 		const alpha = accumulator / TICK_DT;
 		const renderState = interpolateState(gameState, alpha);
+		try {
+			const pl = renderState.players && renderState.players[currentPlayer];
+			renderState._localNextRingId = pl && typeof pl.nextRingId !== 'undefined' ? pl.nextRingId : null;
+		} catch (e) {}
 		camera = cameraTransform(camera, renderState);
 		render(camera, renderState);
 	} else {
@@ -441,6 +456,12 @@ function mainLoop(rafTime) {
 			alpha = Math.max(0, Math.min(1, alpha));
 			renderState = interpolateState(s1.state, alpha);
 
+			// Provide renderer with local nextRingId for highlighting
+			try {
+				const pl = renderState.players && renderState.players[currentPlayer];
+				renderState._localNextRingId = pl && typeof pl.nextRingId !== 'undefined' ? pl.nextRingId : null;
+			} catch (e) {}
+
 			const dbg = document.getElementById('netDebug');
 			if (dbg) {
 				const faceCount = ((rs) => (rs && rs.objects ? rs.objects.reduce((n, o) => n + (o.getRenderable ? (o.getRenderable().faces || []).length : (o.faces || []).length), 0) : 0))(renderState);
@@ -458,6 +479,7 @@ function mainLoop(rafTime) {
 
 		camera = cameraTransform(camera, renderState);
 		render(camera, renderState);
+		updateLeaderboard(renderState);
 	}
 
 	requestAnimationFrame(mainLoop);
@@ -514,14 +536,6 @@ window.addEventListener('keydown', (e) => {
 	if (e.key == 'Escape') {
 		quitGame();
 		return;
-	}
-	if (e.key == 'Enter') {
-		const chatInput = document.getElementById('chatInput');
-		if (!document.activeElement.isEqualNode(chatInput)) {
-			chatInput.focus();
-			e.preventDefault();
-			return;
-		}
 	}
 	keys[keymap[e.key.toLowerCase()]] = true;
 	keyEvent();

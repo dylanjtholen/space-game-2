@@ -252,10 +252,11 @@ export function render(camera, scene) {
 	const players = Array.isArray(scene.players) ? scene.players : [];
 	[...objs, ...players].forEach((object) => {
 		const obj = getRenderable(object);
+		const sourceId = object && typeof object.id !== 'undefined' ? object.id : null;
 		(obj.faces || []).forEach((face) => {
 			const key = face.texture || (face.color ? face.color.toString() : 'default');
 			if (!batches.has(key)) batches.set(key, []);
-			batches.get(key).push({obj, face});
+			batches.get(key).push({obj, face, sourceId});
 		});
 	});
 
@@ -288,7 +289,7 @@ export function render(camera, scene) {
 		}
 
 		let lastObj = null;
-		for (const {obj, face} of group) {
+		for (const {obj, face, sourceId} of group) {
 			const objQuat = obj.rotation;
 
 			_objPosArr[0] = obj.position.x;
@@ -320,6 +321,13 @@ export function render(camera, scene) {
 				}
 				const start = face._vertexOffset || 0;
 				const count = face._vertexCount || 0;
+				// Compute effective color per-face. If the scene provided a localNextRingId
+				// and the object's sourceId matches, highlight it blue for this client.
+				let effectiveColor = color;
+				if (scene && typeof scene._localNextRingId !== 'undefined' && scene._localNextRingId !== null && String(sourceId) === String(scene._localNextRingId)) {
+					effectiveColor = [0, 0, 1, 1];
+				} else if (face.color) effectiveColor = hexToRgb(face.color);
+				if (!useTexture) gl.uniform4fv(glLocations.color, effectiveColor);
 				if (count > 0) gl.drawArrays(gl.TRIANGLES, start, count);
 			} else {
 				if (!face._posBuf) {
@@ -345,6 +353,11 @@ export function render(camera, scene) {
 					gl.vertexAttrib2f(texLocation, 0, 0);
 				}
 				const vcount = face.positions ? face.positions.length / 3 : 0;
+				let effectiveColor = color;
+				if (scene && typeof scene._localNextRingId !== 'undefined' && scene._localNextRingId !== null && String(sourceId) === String(scene._localNextRingId)) {
+					effectiveColor = [0, 0, 1, 1];
+				} else if (face.color) effectiveColor = hexToRgb(face.color);
+				if (!useTexture) gl.uniform4fv(glLocations.color, effectiveColor);
 				if (vcount > 0) gl.drawArrays(gl.TRIANGLES, 0, vcount);
 			}
 		}

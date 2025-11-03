@@ -28,7 +28,12 @@
 				<button id="createRoomButton">Create Room</button>
 			</div>
 		</div>
-		<div id="gameMenu"></div>
+		<div id="gameMenu">
+			<div id="raceLeaderboard">
+				<h2>Leaderboard</h2>
+				<ul id="leaderboardList"></ul>
+			</div>
+		</div>
 		<div id="chatContainer">
 			<div id="chatMessages"></div>
 			<input type="text" id="chatInput" placeholder="Type a message..." />
@@ -40,9 +45,9 @@
 			</div>
 			<form id="gameSettings">
 				<label for="gameModeDropdown">Game Mode:</label>
-				<select id="gameModeDropdown">
-					<option value="sandbox">Sandbox</option>
-				</select>
+				<select id="gameModeDropdown"></select>
+				<label for="mapDropdown">Map:</label>
+				<select id="mapDropdown"></select>
 			</form>
 			<button id="startGameButton">Start Game</button>
 		</div>

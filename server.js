@@ -1,4 +1,4 @@
-import {initGame, tick, addPlayer} from './js/game.js';
+import {initGame, tick, addPlayer, loadMap} from './js/game.js';
 import {CONSTANTS} from './js/consts.js';
 
 import express from 'express';
@@ -68,7 +68,7 @@ io.on('connection', (socket) => {
 			socket.emit('joinedRoom', {success: false, message: 'Room not found'});
 		}
 	});
-	socket.on('startGame', () => {
+	socket.on('startGame', (settings) => {
 		const info = clientInfo[socket.id];
 		if (!info || !rooms[info.roomId]) {
 			socket.emit('startFailure', {success: false, message: 'Not in a room'});
@@ -80,6 +80,8 @@ io.on('connection', (socket) => {
 			socket.emit('startFailure', {success: false, message: 'Only the room creator can start the game'});
 			return;
 		}
+		state.settings.mode = CONSTANTS.MODES.includes(settings.mode) ? settings.mode : 'sandbox';
+		state.settings.map = CONSTANTS.MAPS.includes(settings.map) ? settings.map : 'EmptySpace';
 		startTickLoop(info.roomId);
 	});
 	socket.on('playerInput', (input) => {
@@ -110,8 +112,11 @@ io.on('connection', (socket) => {
 			state.players = state.players.filter((p) => p.uuid !== info.userUUID);
 			if (state.players.length === 0) {
 				delete rooms[info.roomId];
-				clearInterval(roomTickIntervals[info.roomId]);
-				delete roomTickIntervals[info.roomId];
+				if (roomTickIntervals[info.roomId]) {
+					if (roomTickIntervals[info.roomId].tick) clearInterval(roomTickIntervals[info.roomId].tick);
+					if (roomTickIntervals[info.roomId].stats) clearInterval(roomTickIntervals[info.roomId].stats);
+					delete roomTickIntervals[info.roomId];
+				}
 			}
 		}
 	});
@@ -135,8 +140,11 @@ io.on('connection', (socket) => {
 			state.players = state.players.filter((p) => p.uuid !== info.userUUID);
 			if (state.players.length === 0) {
 				delete rooms[info.roomId];
-				clearInterval(roomTickIntervals[info.roomId]);
-				delete roomTickIntervals[info.roomId];
+				if (roomTickIntervals[info.roomId]) {
+					if (roomTickIntervals[info.roomId].tick) clearInterval(roomTickIntervals[info.roomId].tick);
+					if (roomTickIntervals[info.roomId].stats) clearInterval(roomTickIntervals[info.roomId].stats);
+					delete roomTickIntervals[info.roomId];
+				}
 			}
 		}
 	});
@@ -147,8 +155,11 @@ io.on('connection', (socket) => {
 			state.players = state.players.filter((p) => p.uuid !== info.userUUID);
 			if (state.players.length === 0) {
 				delete rooms[info.roomId];
-				clearInterval(roomTickIntervals[info.roomId]);
-				delete roomTickIntervals[info.roomId];
+				if (roomTickIntervals[info.roomId]) {
+					if (roomTickIntervals[info.roomId].tick) clearInterval(roomTickIntervals[info.roomId].tick);
+					if (roomTickIntervals[info.roomId].stats) clearInterval(roomTickIntervals[info.roomId].stats);
+					delete roomTickIntervals[info.roomId];
+				}
 			}
 		}
 		delete clientInfo[socket.id];
@@ -176,13 +187,30 @@ const roomTickIntervals = {};
 const roomSeq = {};
 function startTickLoop(roomId) {
 	let state = rooms[roomId];
+	state = loadMap(state, state.settings.map);
 	io.to(roomId).emit('gameStarted');
-	roomTickIntervals[roomId] = setInterval(() => {
-		state = tick(state, 1 / 60);
+	const EMIT_RATE = 20;
+	let payloadBytesAcc = 0;
+	let payloadEmitCount = 0;
+	const tickInterval = setInterval(() => {
+		state = tick(state, 1 / EMIT_RATE);
 		roomSeq[roomId] = (roomSeq[roomId] || 0) + 1;
 		const payload = {seq: roomSeq[roomId], serverTime: Date.now(), state: serialize(state)};
+		const str = JSON.stringify(payload);
+		payloadBytesAcc += Buffer.byteLength ? Buffer.byteLength(str, 'utf8') : str.length;
+		payloadEmitCount++;
 		io.to(roomId).emit('gameState', payload);
-	}, 1000 / 60);
+	}, 1000 / EMIT_RATE);
+
+	const statsInterval = setInterval(() => {
+		if (!payloadEmitCount) return;
+		const avg = Math.round(payloadBytesAcc / payloadEmitCount);
+		console.log(`room ${roomId} emitCount=${payloadEmitCount} avgPayloadBytes=${avg} emits/s~${EMIT_RATE}`);
+		payloadBytesAcc = 0;
+		payloadEmitCount = 0;
+	}, 5000);
+
+	roomTickIntervals[roomId] = {tick: tickInterval, stats: statsInterval};
 }
 
 function serialize(value) {

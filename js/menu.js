@@ -1,3 +1,4 @@
+import {CONSTANTS} from './consts.js';
 import {serverConnected, startLocalGame, getRooms, createRoom, joinRoom, sendMessage, startGame} from './main.js';
 
 let currentTab = 'mainMenu';
@@ -37,12 +38,17 @@ export function menuInit() {
 		});
 	}
 	const chatInput = document.getElementById('chatInput');
-	chatInput.addEventListener('keydown', (e) => {
+	addEventListener('keydown', (e) => {
 		if (e.key === 'Enter') {
 			const message = chatInput.value.trim();
-			if (message.length > 0 && serverConnected) {
+			if (!document.activeElement.isEqualNode(chatInput)) {
+				chatInput.focus();
+				e.preventDefault();
+				return;
+			} else if (message.length > 0 && serverConnected) {
 				sendMessage(message);
 				chatInput.value = '';
+				chatInput.blur();
 			}
 		}
 	});
@@ -50,6 +56,20 @@ export function menuInit() {
 	startGameButton.addEventListener('click', () => {
 		startGame();
 	});
+	for (const mode of CONSTANTS.MODES) {
+		const dropdown = document.getElementById('gameModeDropdown');
+		const option = document.createElement('option');
+		option.value = mode;
+		option.innerText = mode.charAt(0).toUpperCase() + mode.slice(1);
+		dropdown.appendChild(option);
+	}
+	for (const map of CONSTANTS.MAPS) {
+		const dropdown = document.getElementById('mapDropdown');
+		const option = document.createElement('option');
+		option.value = map;
+		option.innerText = map;
+		dropdown.appendChild(option);
+	}
 }
 
 function refreshRoomList() {
@@ -104,4 +124,58 @@ export function refreshPlayerList(players) {
 		playerElement.innerText = player;
 		playerList.appendChild(playerElement);
 	});
+}
+
+export function updateLeaderboard(state) {
+	if (state.mode !== 'race') {
+		document.getElementById('raceLeaderboard').style.display = 'none';
+		return;
+	}
+	document.getElementById('raceLeaderboard').style.display = 'block';
+	const leaderboardList = document.getElementById('leaderboardList');
+	leaderboardList.innerHTML = '';
+	let players = state.players || [];
+
+	const lastRingIndex = typeof state.totalRings === 'number' ? Math.max(0, state.totalRings - 1) : null;
+	const sorted = [...players].sort((a, b) => {
+		const aRing = typeof a.currentRing === 'number' ? a.currentRing : -1;
+		const bRing = typeof b.currentRing === 'number' ? b.currentRing : -1;
+		if (aRing !== bRing) return bRing - aRing;
+
+		if (lastRingIndex !== null && aRing === lastRingIndex && bRing === lastRingIndex) {
+			const at = typeof a.raceTime === 'number' ? a.raceTime : Infinity;
+			const bt = typeof b.raceTime === 'number' ? b.raceTime : Infinity;
+			if (at !== bt) return at - bt;
+		}
+
+		// fallback
+		return String(a.name || '').localeCompare(String(b.name || ''));
+	});
+
+	sorted.forEach((player) => {
+		const playerElement = document.createElement('li');
+		playerElement.classList.add('player');
+		if (player.finished) {
+			playerElement.classList.add('finished');
+		}
+		playerElement.innerText = `${player.name} - ${formatTime(player.raceTime)} - ${player.currentRing}/${state.totalRings}`;
+		leaderboardList.appendChild(playerElement);
+	});
+}
+
+function formatTime(time) {
+	if (time === null || typeof time === 'undefined') return '--:--.--';
+	let ms = Number(time);
+	if (isNaN(ms)) return '--:--.--';
+	if (Math.abs(ms) < 1000) {
+		ms = Math.round(ms * 1000);
+	} else {
+		ms = Math.round(ms);
+	}
+
+	const totalSeconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	const centis = Math.floor((ms % 1000) / 10);
+	return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centis).padStart(2, '0')}`;
 }
