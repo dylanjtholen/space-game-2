@@ -127,7 +127,7 @@ export function refreshPlayerList(players) {
 }
 
 export function updateLeaderboard(state) {
-	if (state.mode !== 'race') {
+	if (state.settings.mode !== 'race') {
 		document.getElementById('raceLeaderboard').style.display = 'none';
 		return;
 	}

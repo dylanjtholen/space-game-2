@@ -202,10 +202,11 @@ function startTickLoop(roomId) {
 		io.to(roomId).emit('gameState', payload);
 	}, 1000 / EMIT_RATE);
 
+	//net debug
 	const statsInterval = setInterval(() => {
 		if (!payloadEmitCount) return;
 		const avg = Math.round(payloadBytesAcc / payloadEmitCount);
-		console.log(`room ${roomId} emitCount=${payloadEmitCount} avgPayloadBytes=${avg} emits/s~${EMIT_RATE}`);
+		//console.log(`room ${roomId} emitCount=${payloadEmitCount} avgPayloadBytes=${avg} emits/s~${EMIT_RATE}`);
 		payloadBytesAcc = 0;
 		payloadEmitCount = 0;
 	}, 5000);
