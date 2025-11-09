@@ -8,6 +8,7 @@ import path from 'path';
 import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import fs from 'fs/promises';
 
 const app = express();
 const server = createServer(app);
@@ -20,6 +21,30 @@ app.get('/', (req, res) => {
 server.listen(3000, () => {
 	console.log('Server listening on http://localhost:3000');
 });
+
+async function loadMapsIntoConstants() {
+	try {
+		const mapsDir = path.join(__dirname, 'assets', 'maps');
+		const names = await fs.readdir(mapsDir);
+		for (const name of names) {
+			if (!name.endsWith('.json')) continue;
+			try {
+				const txt = await fs.readFile(path.join(mapsDir, name), 'utf8');
+				const data = JSON.parse(txt);
+				const key = name.replace(/\.json$/i, '');
+				CONSTANTS.MAPDATA[key] = data;
+				if (!CONSTANTS.MAPS.includes(key)) CONSTANTS.MAPS.push(key);
+			} catch (e) {
+				console.warn('Failed to load map', name, e.message);
+			}
+		}
+	} catch (e) {
+		console.warn('No maps loaded (assets/maps may be missing)', e.message);
+	}
+}
+
+// populate at startup
+loadMapsIntoConstants();
 
 import {Server} from 'socket.io';
 const io = new Server(server);
@@ -206,7 +231,7 @@ function startTickLoop(roomId) {
 	const statsInterval = setInterval(() => {
 		if (!payloadEmitCount) return;
 		const avg = Math.round(payloadBytesAcc / payloadEmitCount);
-		//console.log(`room ${roomId} emitCount=${payloadEmitCount} avgPayloadBytes=${avg} emits/s~${EMIT_RATE}`);
+		console.log(`room ${roomId} emitCount=${payloadEmitCount} avgPayloadBytes=${avg} emits/s~${EMIT_RATE}`);
 		payloadBytesAcc = 0;
 		payloadEmitCount = 0;
 	}, 5000);

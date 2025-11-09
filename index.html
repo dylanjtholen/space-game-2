@@ -6,11 +6,18 @@
 	<body>
 		<div id="errorBanner" aria-live="assertive"></div>
 		<canvas id="gameCanvas"></canvas>
+		<!-- editor toolbar (hidden until editor active) -->
+		<div id="editorToolbar" class="editor-toolbar" hidden>
+			<select id="mapSelect" aria-label="Map select"></select>
+			<button id="loadMapBtn">Load</button>
+			<button id="exportMapBtn">Export</button>
+		</div>
 		<div id="mainMenu" class="menu">
 			<h1>Space Game</h1>
 			<input type="text" id="usernameInput" placeholder="Enter Username" />
 			<button id="localGameButton">Local Game</button>
 			<button id="onlineGameButton">Online</button>
+			<button id="mapEditorButton">Map Editor</button>
 		</div>
 		<div id="onlineMenu" class="menu">
 			<h2>Online Game</h2>

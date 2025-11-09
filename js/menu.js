@@ -1,5 +1,6 @@
 import {CONSTANTS} from './consts.js';
 import {serverConnected, startLocalGame, getRooms, createRoom, joinRoom, sendMessage, startGame} from './main.js';
+import {startMapEditor, initEditorToolbar} from './mapEditor.js';
 
 let currentTab = 'mainMenu';
 
@@ -31,6 +32,12 @@ export function menuInit() {
 
 		createRoom(name, password, username);
 	});
+	document.getElementById('mapEditorButton').addEventListener('click', () => {
+		startMapEditor();
+		showMenuTab('gameMenu');
+	});
+	// initialize editor toolbar UI wiring
+	initEditorToolbar();
 	const backButtons = document.getElementsByClassName('backToMainButton');
 	for (const button of backButtons) {
 		button.addEventListener('click', () => {

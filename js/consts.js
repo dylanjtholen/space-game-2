@@ -5,16 +5,6 @@ export const CONSTANTS = {
 	MAPS: ['EmptySpace', 'TestMap1'],
 	MODES: ['sandbox', 'race'],
 	MAPDATA: {
-		EmptySpace: {
-			objects: [],
-		},
-		TestMap1: {
-			objects: [
-				{type: 'cube', texture: 'soup', position: {x: 0, y: 0, z: 0}, scale: {x: 1, y: 1, z: 1}},
-				{type: 'ring', position: {x: 0, y: 0, z: -10}, scale: {x: 3, y: 3, z: 3}, id: 0},
-				{type: 'ring', position: {x: 10, y: 0, z: -30}, scale: {x: 3, y: 3, z: 3}, id: 1},
-				{type: 'ring', position: {x: -10, y: 5, z: -50}, scale: {x: 3, y: 3, z: 3}, id: 2, finish: true},
-			],
-		},
+		/*loaded by loadAllAssets*/
 	},
 };

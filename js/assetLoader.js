@@ -1,5 +1,10 @@
+import {CONSTANTS} from './consts.js';
+
 const assets = {};
-const assetList = [{name: 'soup', url: 'assets/cubemap.png'}];
+const imgList = [{name: 'soup', url: 'assets/img/cubemap.png'}];
+const mapList = CONSTANTS.MAPS.map((mapName) => {
+	return {name: mapName, url: `assets/maps/${mapName}.json`};
+});
 
 export async function loadAsset(name, url) {
 	const response = await fetch(url);
@@ -10,7 +15,18 @@ export async function loadAsset(name, url) {
 }
 
 export async function loadAllAssets() {
-	const promises = assetList.map((a) => loadAsset(a.name, a.url));
+	const promises = [];
+	for (const img of imgList) {
+		promises.push(loadAsset(img.name, img.url));
+	}
+	for (const map of mapList) {
+		const p = fetch(map.url)
+			.then((response) => response.json())
+			.then((data) => {
+				assets[map.name] = data;
+			});
+		promises.push(p);
+	}
 	await Promise.all(promises);
 }
 
