@@ -1,5 +1,5 @@
 import {render, initRenderer, cleanupRenderable} from './renderer.js';
-import {tick, initGame, Player, addPlayer} from './game.js';
+import {tick, initGame, Player, addPlayer, loadMap} from './game.js';
 import {loadAllAssets} from './assetLoader.js';
 import {vec3, quat} from 'gl-matrix';
 import {menuInit, refreshPlayerList, showError, showMenuTab, updateLeaderboard} from './menu.js';
@@ -132,11 +132,19 @@ socket.on('gameStarted', () => {
 });
 
 export function startGame() {
-	if (!serverConnected || localGame) return;
+	if (!serverConnected) return;
 	const gameType = document.getElementById('gameModeDropdown').value;
 	const map = document.getElementById('mapDropdown').value;
 	const settings = {mode: gameType, map: map};
-	socket.emit('startGame', settings);
+	if (localGame) {
+		gameState.settings = settings;
+		gameState = loadMap(gameState, map);
+		console.log(map);
+		showMenuTab('gameMenu');
+		startGameLoop();
+	} else {
+		socket.emit('startGame', settings);
+	}
 }
 
 export function sendMessage(message) {
@@ -214,11 +222,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 export function startLocalGame() {
-	alert('local game is kinda broken rn');
 	localGame = true;
 	gameState = initGame();
-	addPlayer(gameState);
-	startGameLoop();
+	const username = document.getElementById('usernameInput').value.trim();
+	addPlayer(gameState, null, username);
 }
 
 let camera = {
@@ -421,6 +428,7 @@ function mainLoop(rafTime) {
 		} catch (e) {}
 		camera = cameraTransform(camera, renderState);
 		render(camera, renderState);
+		updateLeaderboard(renderState);
 	} else {
 		const now = Date.now();
 		const renderTime = now + serverTimeOffset - RENDER_DELAY * 1000;

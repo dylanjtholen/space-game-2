@@ -228,13 +228,14 @@ function startTickLoop(roomId) {
 	}, 1000 / EMIT_RATE);
 
 	//net debug
-	const statsInterval = setInterval(() => {
+
+	/*const statsInterval = setInterval(() => {
 		if (!payloadEmitCount) return;
 		const avg = Math.round(payloadBytesAcc / payloadEmitCount);
 		console.log(`room ${roomId} emitCount=${payloadEmitCount} avgPayloadBytes=${avg} emits/s~${EMIT_RATE}`);
 		payloadBytesAcc = 0;
 		payloadEmitCount = 0;
-	}, 5000);
+	}, 5000);*/
 
 	roomTickIntervals[roomId] = {tick: tickInterval, stats: statsInterval};
 }

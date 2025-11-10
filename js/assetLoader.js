@@ -23,7 +23,7 @@ export async function loadAllAssets() {
 		const p = fetch(map.url)
 			.then((response) => response.json())
 			.then((data) => {
-				assets[map.name] = data;
+				CONSTANTS.MAPDATA[map.name] = data;
 			});
 		promises.push(p);
 	}

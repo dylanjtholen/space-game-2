@@ -18,7 +18,7 @@ export function showMenuTab(tabId) {
 export function menuInit() {
 	document.getElementById('localGameButton').addEventListener('click', () => {
 		startLocalGame();
-		showMenuTab('gameMenu');
+		showMenuTab('lobby');
 	});
 	document.getElementById('onlineGameButton').addEventListener('click', () => showMenuTab('onlineMenu'));
 	document.getElementById('refreshRoomsButton').addEventListener('click', refreshRoomList);
